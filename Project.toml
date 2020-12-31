@@ -9,6 +9,7 @@ LearnBase = "7f8f8fb0-2700-5f03-b4bd-41f8cfc144b6"
 NIfTI = "a3a9e032-41b5-5fc4-967a-a6b7a19844d3"
 
 [compat]
+NIfTI = "0.5"
 julia = "1"
 
 [extras]
