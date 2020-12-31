@@ -196,9 +196,9 @@ version = "1.4.0"
 
 [[DataAugmentation]]
 deps = ["ColorBlendModes", "CoordinateTransformations", "DocStringExtensions", "ImageDraw", "ImageTransformations", "Images", "Interpolations", "LinearAlgebra", "Parameters", "Rotations", "Setfield", "StaticArrays", "Statistics"]
-git-tree-sha1 = "6dae8935f0a574af14e5d242393e9289c4ba0017"
+git-tree-sha1 = "d42d03c287258e4b36884456746bd610090391b8"
 repo-rev = "master"
-repo-url = "https://github.com/Dale-Black/DataAugmentation.jl.git"
+repo-url = "https://github.com/Dale-Black/DataAugmentation.jl"
 uuid = "88a5189c-e7ff-4f85-ac6b-e6158070f02e"
 version = "0.1.0"
 

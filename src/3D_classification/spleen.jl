@@ -4,26 +4,29 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ fbc8136c-4acf-11eb-25d0-11a3337582fd
-using Pkg
-
-# ╔═╡ e6f4e9d8-4acf-11eb-3cb8-435c7faedeb0
-using NIfTI: niread
-
-# ╔═╡ d1d57786-4acf-11eb-32e1-553bff8011f6
-using Glob: glob
-
-# ╔═╡ d56fc3cc-4acf-11eb-1656-1d50718dd5ab
-using MLDataPattern: splitobs, getobs
-
-# ╔═╡ d8440a72-4acd-11eb-3375-29e40c34f75e
-using DLPipelines
-
-# ╔═╡ b7c8882a-4acc-11eb-15b8-2f4447aa8071
-using DataAugmentation
-
-# ╔═╡ b64d8310-4acf-11eb-3e9d-15be083ee7de
-using Random: seed!
+# ╔═╡ cd611ea8-4ba4-11eb-025f-2db195ae152b
+begin
+	
+	
+	using Pkg
+	Pkg.activate(".")
+	
+	# ] add NIfTI
+	# ] add Glob
+	# ] add MLDataPattern
+	# ] add https://github.com/lorenzoh/DLPipelines.jl
+	# ] add https://github.com/Dale-Black/DataAugmentation
+	
+	
+	using NIfTI
+	using Glob
+	using MLDataPattern
+	using DLPipelines
+	using DataAugmentation
+	using Random: seed!
+	
+	
+end
 
 # ╔═╡ 27add6de-3922-11eb-0955-156a939a344f
 md"""
@@ -36,11 +39,8 @@ md"""
 ## Set up environment
 """
 
-# ╔═╡ 985130d2-4ba1-11eb-1834-358c9000477c
+# ╔═╡ 5e89f012-4ba5-11eb-3e35-63a1d62e3e94
 pwd()
-
-# ╔═╡ 00131674-4ad0-11eb-34f9-a5d810992568
-Pkg.activate(".")
 
 # ╔═╡ 96121a84-3924-11eb-1cbb-0de4f3c73b0c
 md"""
@@ -66,23 +66,16 @@ begin
 	
 end
 
-# ╔═╡ c0ca0f3c-4ba0-11eb-314a-cd31626dda93
-begin
-	
-	import LearnBase
-	
-end
-
 # ╔═╡ 4a8101aa-3926-11eb-1d4b-0721530a9423
 begin
 
 	
-	LearnBase.nobs(ds::imagesTr) = length(ds.files)
-	LearnBase.getobs(ds::imagesTr, idx::Int) = niread(ds.files[idx]).raw
+	MLDataPattern.nobs(ds::imagesTr) = length(ds.files)
+	MLDataPattern.getobs(ds::imagesTr, idx::Int) = niread(ds.files[idx]).raw
 
 
-	LearnBase.nobs(ds::labelsTr) = length(ds.files)
-	LearnBase.getobs(ds::labelsTr, idx::Int) = niread(ds.files[idx]).raw
+	MLDataPattern.nobs(ds::labelsTr) = length(ds.files)
+	MLDataPattern.getobs(ds::labelsTr, idx::Int) = niread(ds.files[idx]).raw
 	
 	
 end
@@ -195,28 +188,20 @@ seed!(1);
 # ╔═╡ Cell order:
 # ╟─27add6de-3922-11eb-0955-156a939a344f
 # ╟─528e6bb6-3922-11eb-1961-41fc9fb4a094
-# ╠═fbc8136c-4acf-11eb-25d0-11a3337582fd
-# ╠═985130d2-4ba1-11eb-1834-358c9000477c
-# ╠═00131674-4ad0-11eb-34f9-a5d810992568
+# ╠═cd611ea8-4ba4-11eb-025f-2db195ae152b
+# ╠═5e89f012-4ba5-11eb-3e35-63a1d62e3e94
 # ╟─96121a84-3924-11eb-1cbb-0de4f3c73b0c
 # ╠═ef664078-3925-11eb-3b3d-438868228269
 # ╠═3ebe6c74-3926-11eb-2a01-f951f7a6849c
-# ╠═e6f4e9d8-4acf-11eb-3cb8-435c7faedeb0
-# ╠═c0ca0f3c-4ba0-11eb-314a-cd31626dda93
 # ╠═4a8101aa-3926-11eb-1d4b-0721530a9423
-# ╠═d1d57786-4acf-11eb-32e1-553bff8011f6
-# ╠═d56fc3cc-4acf-11eb-1656-1d50718dd5ab
 # ╠═57fd3a7e-3926-11eb-0e3f-858f616cea60
 # ╟─0ea7faf0-4acc-11eb-2ffd-7bf66092c013
 # ╠═cd647910-4acb-11eb-2ee7-972c711247dc
 # ╟─99e83cd8-3929-11eb-0a0e-e1d5780c77b4
-# ╠═d8440a72-4acd-11eb-3375-29e40c34f75e
 # ╠═43d816ce-4a40-11eb-1647-f37930d8eb8a
-# ╠═b7c8882a-4acc-11eb-15b8-2f4447aa8071
 # ╠═797e08be-4a41-11eb-0c4e-1df9d65735b6
 # ╠═794f97cc-4a41-11eb-08f6-e1487743247d
 # ╟─893b0544-4ace-11eb-37d7-6da2eb2ec12d
 # ╠═3c77c182-4acb-11eb-22c5-9f100c192b0d
 # ╟─62148508-3926-11eb-34d2-a7bedab25f30
-# ╠═b64d8310-4acf-11eb-3e9d-15be083ee7de
 # ╠═c01c2eb6-4acf-11eb-2a85-2fe31d094684
