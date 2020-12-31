@@ -9,4 +9,4 @@
 
 * Spleen
   * Source code: [link](https://github.com/Dale-Black/MedicalTutorials.jl/blob/master/src/3D_classification/spleen.jl)
-  * HTML: [link](https://dale-black.github.io/MedicalTutorials.jl/)
+  * HTML: [link](https://dale-black.github.io/MedicalTutorials.jl/src/3D_classification/spleen.jl.html)
