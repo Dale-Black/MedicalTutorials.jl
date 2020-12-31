@@ -10,9 +10,6 @@ using Pkg
 # ╔═╡ e6f4e9d8-4acf-11eb-3cb8-435c7faedeb0
 using NIfTI: niread
 
-# ╔═╡ ebf9d894-4acf-11eb-25e3-03c593a7dab8
-using LearnBase
-
 # ╔═╡ d1d57786-4acf-11eb-32e1-553bff8011f6
 using Glob: glob
 
@@ -38,6 +35,9 @@ This tutorial shows how to use Julia and FluxTraining.jl to train a model to seg
 md"""
 ## Set up environment
 """
+
+# ╔═╡ 985130d2-4ba1-11eb-1834-358c9000477c
+pwd()
 
 # ╔═╡ 00131674-4ad0-11eb-34f9-a5d810992568
 Pkg.activate(".")
@@ -66,9 +66,16 @@ begin
 	
 end
 
-# ╔═╡ 4a8101aa-3926-11eb-1d4b-0721530a9423
+# ╔═╡ c0ca0f3c-4ba0-11eb-314a-cd31626dda93
 begin
 	
+	import LearnBase
+	
+end
+
+# ╔═╡ 4a8101aa-3926-11eb-1d4b-0721530a9423
+begin
+
 	
 	LearnBase.nobs(ds::imagesTr) = length(ds.files)
 	LearnBase.getobs(ds::imagesTr, idx::Int) = niread(ds.files[idx]).raw
@@ -189,12 +196,13 @@ seed!(1);
 # ╟─27add6de-3922-11eb-0955-156a939a344f
 # ╟─528e6bb6-3922-11eb-1961-41fc9fb4a094
 # ╠═fbc8136c-4acf-11eb-25d0-11a3337582fd
+# ╠═985130d2-4ba1-11eb-1834-358c9000477c
 # ╠═00131674-4ad0-11eb-34f9-a5d810992568
 # ╟─96121a84-3924-11eb-1cbb-0de4f3c73b0c
 # ╠═ef664078-3925-11eb-3b3d-438868228269
 # ╠═3ebe6c74-3926-11eb-2a01-f951f7a6849c
 # ╠═e6f4e9d8-4acf-11eb-3cb8-435c7faedeb0
-# ╠═ebf9d894-4acf-11eb-25e3-03c593a7dab8
+# ╠═c0ca0f3c-4ba0-11eb-314a-cd31626dda93
 # ╠═4a8101aa-3926-11eb-1d4b-0721530a9423
 # ╠═d1d57786-4acf-11eb-32e1-553bff8011f6
 # ╠═d56fc3cc-4acf-11eb-1656-1d50718dd5ab

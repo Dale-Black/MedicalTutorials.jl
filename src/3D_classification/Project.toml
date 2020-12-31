@@ -1,0 +1,7 @@
+[deps]
+DLPipelines = "e6530d7c-7faa-4ede-a0d6-9eff9baad396"
+DataAugmentation = "88a5189c-e7ff-4f85-ac6b-e6158070f02e"
+Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
+MLDataPattern = "9920b226-0b2a-5f5f-9153-9aa70a013f8b"
+NIfTI = "a3a9e032-41b5-5fc4-967a-a6b7a19844d3"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
