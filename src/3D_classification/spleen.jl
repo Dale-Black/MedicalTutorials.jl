@@ -25,6 +25,7 @@ begin
 	# ] add MLDataPattern
 	# ] add https://github.com/lorenzoh/DLPipelines.jl
 	# ] add https://github.com/lorenzoh/DataAugmentation.jl.git
+	# ] add PlutoUI
 	# ] add Plots
 	
 	
@@ -199,7 +200,7 @@ end
 
 # ╔═╡ 893b0544-4ace-11eb-37d7-6da2eb2ec12d
 md"""
-Double check that the data processing works as expected. After applying the transforms, the first images `(x, y)` should go from size == `(512, 512, 55)` to size = `(96, 96, 96)`
+Double check that the data processing works as expected. After applying the transforms, the first images `(x, y)` should go from size == `(512, 512, 55)` to size = `(512, 512, 96)`
 """
 
 # ╔═╡ 3c77c182-4acb-11eb-22c5-9f100c192b0d
