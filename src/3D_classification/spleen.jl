@@ -4,6 +4,15 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        el
+    end
+end
+
 # ╔═╡ cd611ea8-4ba4-11eb-025f-2db195ae152b
 begin
 	
@@ -15,7 +24,8 @@ begin
 	# ] add Glob
 	# ] add MLDataPattern
 	# ] add https://github.com/lorenzoh/DLPipelines.jl
-	# ] add https://github.com/Dale-Black/DataAugmentation
+	# ] add https://github.com/lorenzoh/DataAugmentation.jl.git
+	# ] add Plots
 	
 	
 	using NIfTI
@@ -24,6 +34,8 @@ begin
 	using DLPipelines
 	using DataAugmentation
 	using Random: seed!
+	using PlutoUI
+	using Plots
 	
 	
 end
@@ -71,11 +83,11 @@ begin
 
 	
 	MLDataPattern.nobs(ds::imagesTr) = length(ds.files)
-	MLDataPattern.getobs(ds::imagesTr, idx::Int) = niread(ds.files[idx]).raw
+	MLDataPattern.getobs(ds::imagesTr, idx::Int) = (niread(ds.files[idx]).raw)
 
 
 	MLDataPattern.nobs(ds::labelsTr) = length(ds.files)
-	MLDataPattern.getobs(ds::labelsTr, idx::Int) = niread(ds.files[idx]).raw
+	MLDataPattern.getobs(ds::labelsTr, idx::Int) = (niread(ds.files[idx]).raw)
 	
 	
 end
@@ -110,6 +122,7 @@ end
 # ╔═╡ 99e83cd8-3929-11eb-0a0e-e1d5780c77b4
 md"""
 ## Set up data processing
+* Follow [this workflow](https://www.notion.so/Deep-learning-workflow-Ecosystem-overview-c5648bd1951b404d911fe705eced0e41)
 """
 
 # ╔═╡ 43d816ce-4a40-11eb-1647-f37930d8eb8a
@@ -122,7 +135,8 @@ begin
 		imagesize
 	end
 	
-	method = ImageSegmentationSimple((96, 96, 96))
+	method = ImageSegmentationSimple((512, 512, 96))
+	
 	
 end;
 
@@ -136,7 +150,7 @@ begin
 			context::Training,
 			image)
 		tfm = RandomResizeCrop(method.imagesize) |> NormalizeIntensity()
-		return apply(tfm, image) |> itemdata
+		return apply(tfm, Image(image)) |> itemdata
 	end
 	
 	function DLPipelines.encodeinput(
@@ -144,7 +158,30 @@ begin
 			context::Validation,
 			image)
 		tfm = CenterResizeCrop(method.imagesize) |> NormalizeIntensity()
-		return apply(tfm, image) |> itemdata
+		return apply(tfm, Image(image)) |> itemdata
+	end
+	
+
+end
+
+# ╔═╡ ccbd3738-53dc-11eb-27cb-4daae45f3216
+begin
+	
+	
+	function DLPipelines.encodetarget(
+			method::ImageSegmentationSimple,
+			context::Training,
+			image)
+		tfm = RandomResizeCrop(method.imagesize) |> ToBinary()
+		return apply(tfm, Image(image)) |> itemdata
+	end
+	
+	function DLPipelines.encodetarget(
+			method::ImageSegmentationSimple,
+			context::Validation,
+			image)
+		tfm = CenterResizeCrop(method.imagesize) |> ToBinary()
+		return apply(tfm, Image(image)) |> itemdata
 	end
 	
 
@@ -154,8 +191,8 @@ end
 begin
 	
 	
-	methoddata_train = MethodDataset(train_files, method, Training())
-	methoddata_valid = MethodDataset(val_files, method, Validation())
+	methoddata_train = DLPipelines.MethodDataset(train_files, method, Training())
+	methoddata_valid = DLPipelines.MethodDataset(val_files, method, Validation())
 
 
 end
@@ -167,13 +204,13 @@ Double check that the data processing works as expected. After applying the tran
 
 # ╔═╡ 3c77c182-4acb-11eb-22c5-9f100c192b0d
 begin
-	
 
 	let
 		x, y = getobs(methoddata_train, 1)
-		size(x) == (96, 96, 96)
-		size(y) == (96, 96, 96)
+		size(x) == (512, 512, 96)
+		size(y) == (512, 512, 96)
 	end
+	
 	
 end
 
@@ -184,6 +221,38 @@ md"""
 
 # ╔═╡ c01c2eb6-4acf-11eb-2a85-2fe31d094684
 seed!(1);
+
+# ╔═╡ 96aef858-53dd-11eb-2b07-d17a14c76ed5
+md"""
+## Plot data
+"""
+
+# ╔═╡ 14ca4132-53e5-11eb-2027-75733a1fac04
+x, y = getobs(methoddata_valid, 1);
+
+# ╔═╡ 552d6304-53e4-11eb-125b-c18befd4ba5e
+md"""
+$(@bind a Slider(1:96))
+"""
+
+# ╔═╡ 9eaf316c-53dd-11eb-0d26-9f045503a6b6
+heatmap(x[:, :, a], c = :grays)
+
+# ╔═╡ 2ec87554-53e5-11eb-3e64-3758fcc7df53
+md"""
+$(@bind b Slider(1:96))
+"""
+
+# ╔═╡ 029d10ca-53e5-11eb-329b-f73a2fbce197
+heatmap(y[:, :, b], c = :grays)
+
+# ╔═╡ 9ea1d47e-53e5-11eb-0ab5-117b5c7a8422
+md"""
+## Create model
+"""
+
+# ╔═╡ bed2b79a-53e5-11eb-3ca7-af204353caa8
+
 
 # ╔═╡ Cell order:
 # ╟─27add6de-3922-11eb-0955-156a939a344f
@@ -200,8 +269,17 @@ seed!(1);
 # ╟─99e83cd8-3929-11eb-0a0e-e1d5780c77b4
 # ╠═43d816ce-4a40-11eb-1647-f37930d8eb8a
 # ╠═797e08be-4a41-11eb-0c4e-1df9d65735b6
+# ╠═ccbd3738-53dc-11eb-27cb-4daae45f3216
 # ╠═794f97cc-4a41-11eb-08f6-e1487743247d
 # ╟─893b0544-4ace-11eb-37d7-6da2eb2ec12d
 # ╠═3c77c182-4acb-11eb-22c5-9f100c192b0d
 # ╟─62148508-3926-11eb-34d2-a7bedab25f30
 # ╠═c01c2eb6-4acf-11eb-2a85-2fe31d094684
+# ╟─96aef858-53dd-11eb-2b07-d17a14c76ed5
+# ╠═14ca4132-53e5-11eb-2027-75733a1fac04
+# ╟─552d6304-53e4-11eb-125b-c18befd4ba5e
+# ╠═9eaf316c-53dd-11eb-0d26-9f045503a6b6
+# ╟─2ec87554-53e5-11eb-3e64-3758fcc7df53
+# ╠═029d10ca-53e5-11eb-329b-f73a2fbce197
+# ╟─9ea1d47e-53e5-11eb-0ab5-117b5c7a8422
+# ╠═bed2b79a-53e5-11eb-3ca7-af204353caa8
