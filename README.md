@@ -5,6 +5,8 @@
 [![Build Status](https://travis-ci.com/Dale-Black/MedicalTutorials.jl.svg?branch=master)](https://travis-ci.com/Dale-Black/MedicalTutorials.jl)
 [![Coverage](https://codecov.io/gh/Dale-Black/MedicalTutorials.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/Dale-Black/MedicalTutorials.jl)
 
+This repo is heavily inspired by [Monai-Tutorials](https://github.com/Project-MONAI/tutorials)
+
 ## 3D Classification
 
 * Spleen
