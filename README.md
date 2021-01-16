@@ -10,5 +10,5 @@ This repo is heavily inspired by [Monai-Tutorials](https://github.com/Project-MO
 ## 3D Segmentation
 
 * Spleen
-  * Source code: [link](https://github.com/Dale-Black/MedicalTutorials.jl/blob/master/src/3D_classification/spleen.jl)
-  * HTML: [link](https://github.com/Dale-Black/MedicalTutorials.jl/blob/master/src/3D_Segmentation/Spleen/spleen.jl.html)
+  * Source code: [link](https://github.com/Dale-Black/MedicalTutorials.jl/blob/master/src/3D_Segmentation/Spleen/spleen.jl.html)
+  * HTML: [link](https://htmlpreview.github.io/?https://github.com/Dale-Black/MedicalTutorials.jl/blob/master/src/3D_Segmentation/Spleen/spleen.jl.html)
