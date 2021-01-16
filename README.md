@@ -7,7 +7,7 @@
 
 This repo is heavily inspired by [Monai-Tutorials](https://github.com/Project-MONAI/tutorials)
 
-## 3D Classification
+## 3D Segmentation
 
 * Spleen
   * Source code: [link](https://github.com/Dale-Black/MedicalTutorials.jl/blob/master/src/3D_classification/spleen.jl)
