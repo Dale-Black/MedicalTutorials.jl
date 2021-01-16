@@ -37,6 +37,7 @@ begin
 	using Random: seed!
 	using PlutoUI
 	using Plots
+	using Flux
 	
 	
 end
@@ -113,7 +114,7 @@ Double check that the data files are set up properly. The files should contain m
 begin
 	
 	let
-		x, y = getobs(train_files, 1)
+		x, y = getobs(train_files, 2)
 		typeof(x), size(x), size(y)
 	end
 	
@@ -173,16 +174,16 @@ begin
 			method::ImageSegmentationSimple,
 			context::Training,
 			image)
-		tfm = RandomResizeCrop(method.imagesize) |> ToBinary()
-		return apply(tfm, Image(image)) |> itemdata
+		tfm = RandomResizeCrop(method.imagesize)
+		return apply(tfm, MaskBinary(reinterpret(Bool, image))) |> itemdata
 	end
 	
 	function DLPipelines.encodetarget(
 			method::ImageSegmentationSimple,
 			context::Validation,
 			image)
-		tfm = CenterResizeCrop(method.imagesize) |> ToBinary()
-		return apply(tfm, Image(image)) |> itemdata
+		tfm = CenterResizeCrop(method.imagesize)
+		return apply(tfm, MaskBinary(reinterpret(Bool, image))) |> itemdata
 	end
 	
 
@@ -215,14 +216,6 @@ begin
 	
 end
 
-# ╔═╡ 62148508-3926-11eb-34d2-a7bedab25f30
-md"""
-## Set deterministic training for reproducibility
-"""
-
-# ╔═╡ c01c2eb6-4acf-11eb-2a85-2fe31d094684
-seed!(1);
-
 # ╔═╡ 96aef858-53dd-11eb-2b07-d17a14c76ed5
 md"""
 ## Plot data
@@ -239,21 +232,28 @@ $(@bind a Slider(1:96))
 # ╔═╡ 9eaf316c-53dd-11eb-0d26-9f045503a6b6
 heatmap(x[:, :, a], c = :grays)
 
-# ╔═╡ 2ec87554-53e5-11eb-3e64-3758fcc7df53
+# ╔═╡ 029d10ca-53e5-11eb-329b-f73a2fbce197
+heatmap(y[:, :, a], c = :grays)
+
+# ╔═╡ 62148508-3926-11eb-34d2-a7bedab25f30
 md"""
-$(@bind b Slider(1:96))
+## Set deterministic training for reproducibility
 """
 
-# ╔═╡ 029d10ca-53e5-11eb-329b-f73a2fbce197
-heatmap(y[:, :, b], c = :grays)
+# ╔═╡ c01c2eb6-4acf-11eb-2a85-2fe31d094684
+seed!(1);
 
 # ╔═╡ 9ea1d47e-53e5-11eb-0ab5-117b5c7a8422
 md"""
 ## Create model
+* Adapted from [link](https://gist.github.com/haampie/bceb1d59fd9a44f092f913062e58d482)
 """
 
-# ╔═╡ bed2b79a-53e5-11eb-3ca7-af204353caa8
+# ╔═╡ 9ea0f536-579b-11eb-1709-95271e9a775e
 
+
+# ╔═╡ aa8f509a-5796-11eb-3f42-93555ff8dcda
+image = reshape(collect(1:100), (5, 4, 5));
 
 # ╔═╡ Cell order:
 # ╟─27add6de-3922-11eb-0955-156a939a344f
@@ -274,13 +274,13 @@ md"""
 # ╠═794f97cc-4a41-11eb-08f6-e1487743247d
 # ╟─893b0544-4ace-11eb-37d7-6da2eb2ec12d
 # ╠═3c77c182-4acb-11eb-22c5-9f100c192b0d
-# ╟─62148508-3926-11eb-34d2-a7bedab25f30
-# ╠═c01c2eb6-4acf-11eb-2a85-2fe31d094684
 # ╟─96aef858-53dd-11eb-2b07-d17a14c76ed5
 # ╠═14ca4132-53e5-11eb-2027-75733a1fac04
 # ╟─552d6304-53e4-11eb-125b-c18befd4ba5e
-# ╠═9eaf316c-53dd-11eb-0d26-9f045503a6b6
-# ╟─2ec87554-53e5-11eb-3e64-3758fcc7df53
-# ╠═029d10ca-53e5-11eb-329b-f73a2fbce197
+# ╟─9eaf316c-53dd-11eb-0d26-9f045503a6b6
+# ╟─029d10ca-53e5-11eb-329b-f73a2fbce197
+# ╟─62148508-3926-11eb-34d2-a7bedab25f30
+# ╠═c01c2eb6-4acf-11eb-2a85-2fe31d094684
 # ╟─9ea1d47e-53e5-11eb-0ab5-117b5c7a8422
-# ╠═bed2b79a-53e5-11eb-3ca7-af204353caa8
+# ╠═9ea0f536-579b-11eb-1709-95271e9a775e
+# ╠═aa8f509a-5796-11eb-3f42-93555ff8dcda
