@@ -2,6 +2,7 @@
 DLPipelines = "e6530d7c-7faa-4ede-a0d6-9eff9baad396"
 DataAugmentation = "88a5189c-e7ff-4f85-ac6b-e6158070f02e"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+Functors = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
 Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
 LearnBase = "7f8f8fb0-2700-5f03-b4bd-41f8cfc144b6"
 MLDataPattern = "9920b226-0b2a-5f5f-9153-9aa70a013f8b"
