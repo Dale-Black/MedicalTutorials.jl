@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.12.18
+# v0.13.0
 
 using Markdown
 using InteractiveUtils
@@ -58,13 +58,6 @@ md"""
 ## Set up environment
 """
 
-# ╔═╡ efe8a1fc-5b84-11eb-27bf-23d304283029
-html"""<style>
-main {
-	max-width: 1500px;
-}
-"""
-
 # ╔═╡ 5e89f012-4ba5-11eb-3e35-63a1d62e3e94
 pwd()
 
@@ -80,41 +73,28 @@ data_dir = "/Users/daleblack/Google Drive/Datasets/spleen/Task09_Spleen";
 
 # ╔═╡ 3ebe6c74-3926-11eb-2a01-f951f7a6849c
 begin 
-	
-	
 	struct imagesTr
 		files::Vector{String}
 	end
 	struct labelsTr
 		files::Vector{String}
 	end
-	
-	
 end
 
 # ╔═╡ 4a8101aa-3926-11eb-1d4b-0721530a9423
 begin
-
-	
 	MLDataPattern.nobs(ds::imagesTr) = length(ds.files)
 	MLDataPattern.getobs(ds::imagesTr, idx::Int) = (niread(ds.files[idx]).raw)
 
-
 	MLDataPattern.nobs(ds::labelsTr) = length(ds.files)
-	MLDataPattern.getobs(ds::labelsTr, idx::Int) = (niread(ds.files[idx]).raw)
-	
-	
+	MLDataPattern.getobs(ds::labelsTr, idx::Int) = (niread(ds.files[idx]).raw)	
 end
 
 # ╔═╡ 57fd3a7e-3926-11eb-0e3f-858f616cea60
 begin
-
-	
 	train_images = imagesTr(glob("*.nii.gz", joinpath(data_dir, "imagesTr")))
 	train_labels = labelsTr(glob("*.nii.gz", joinpath(data_dir, "labelsTr")))
 	train_files, val_files = splitobs((train_images, train_labels), 0.8)
-
-
 end;
 
 # ╔═╡ 0ea7faf0-4acc-11eb-2ffd-7bf66092c013
@@ -124,13 +104,10 @@ Double check that the data files are set up properly. The files should contain m
 
 # ╔═╡ cd647910-4acb-11eb-2ee7-972c711247dc
 begin
-	
 	let
 		x, y = getobs(train_files, 2)
 		typeof(x), size(x), size(y)
 	end
-	
-	
 end
 
 # ╔═╡ 99e83cd8-3929-11eb-0a0e-e1d5780c77b4
@@ -144,8 +121,6 @@ md"""
 
 # ╔═╡ 43d816ce-4a40-11eb-1647-f37930d8eb8a
 begin
-	
-	
 	abstract type ImageSegmentationTask <: DLPipelines.Task end
 	
 	struct ImageSegmentationSimple <: DLPipelines.Method{ImageSegmentationTask}
@@ -153,15 +128,10 @@ begin
 	end
 	
 	method = ImageSegmentationSimple((512, 512, 96))
-	
-	
 end;
 
 # ╔═╡ 797e08be-4a41-11eb-0c4e-1df9d65735b6
 begin
-	
-	
-	
 	function DLPipelines.encodeinput(
 			method::ImageSegmentationSimple,
 			context::Training,
@@ -177,14 +147,10 @@ begin
 		tfm = CenterResizeCrop(method.imagesize) |> NormalizeIntensity() |> AddChannel()
 		return apply(tfm, Image(image)) |> itemdata
 	end
-	
-
 end
 
 # ╔═╡ ccbd3738-53dc-11eb-27cb-4daae45f3216
 begin
-	
-	
 	function DLPipelines.encodetarget(
 			method::ImageSegmentationSimple,
 			context::Training,
@@ -200,18 +166,12 @@ begin
 		tfm = CenterResizeCrop(method.imagesize) |> AddChannel()
 		return apply(tfm, MaskBinary(reinterpret(Bool, image))) |> itemdata
 	end
-	
-
 end
 
 # ╔═╡ 794f97cc-4a41-11eb-08f6-e1487743247d
 begin
-	
-	
 	methoddata_train = DLPipelines.MethodDataset(train_files, method, Training())
 	methoddata_valid = DLPipelines.MethodDataset(val_files, method, Validation())
-
-
 end
 
 # ╔═╡ 893b0544-4ace-11eb-37d7-6da2eb2ec12d
@@ -221,14 +181,11 @@ Double check that the data processing works as expected. After applying the tran
 
 # ╔═╡ 3c77c182-4acb-11eb-22c5-9f100c192b0d
 begin
-
 	let
 		x, y = getobs(methoddata_train, 1)
 		size(x) == (512, 512, 96, 1)
 		size(y) == (512, 512, 96, 1)
 	end
-	
-	
 end
 
 # ╔═╡ 96aef858-53dd-11eb-2b07-d17a14c76ed5
@@ -362,8 +319,6 @@ end
 
 # ╔═╡ 3474dc06-5889-11eb-28a6-b19e3b392af8
 begin
-	
-	
 	struct UNetUpBlock
     	upsample
 	end
@@ -434,7 +389,6 @@ begin
 		up_x5 = u.up_blocks[4](up_x3, op)
 		tanh.(u.up_blocks[end](up_x5))
 	end
-	
 end
 
 # ╔═╡ 1a5d9a88-588e-11eb-2b0c-3115e94329db
@@ -491,7 +445,7 @@ end
 
 # ╔═╡ d4ff40a4-5b85-11eb-1216-ed4c6029426c
 md"""
-Load an entire 5D array `(width, height, depth, channels, batch_size)` into the model all at one. The array size should be unchanged but the values should be different
+Load an entire 5D array `(width, height, depth, channels, batch_size)` into the model all at once. The array size should be unchanged but the values should be different
 """
 
 # ╔═╡ 5acdb270-5b85-11eb-3590-afaf2ac61d88
@@ -499,13 +453,10 @@ with_terminal() do
 	model = Unet(1, 1)
 	x = rand(Float32, 64, 64, 64, 1, 1)
 	x̂ = model(x)
-	println("size x: ", size(x))
-	println()
-	println(x[:, 1, 1, 1, 1])
-	println()
-	println("Size x̂: ", size(x̂))
-	println()
-	println(x̂[:, 1, 1, 1, 1])
+	println("Size x: ", size(x))
+	println("\nSize x̂: ", size(x̂))
+	println("\nSize input (x) matches size output (x̂): ", size(x) == size(x̂))
+	println("\nx values different than x̂ values: ", x[1,1,1,1,1] != x̂[1,1,1,1,1])
 end
 
 # ╔═╡ 51d81924-59b1-11eb-2ead-ed5d20387bf5
@@ -517,47 +468,46 @@ md"""
 
 
 # ╔═╡ Cell order:
-# ╟─27add6de-3922-11eb-0955-156a939a344f
-# ╟─528e6bb6-3922-11eb-1961-41fc9fb4a094
-# ╠═efe8a1fc-5b84-11eb-27bf-23d304283029
+# ╠═27add6de-3922-11eb-0955-156a939a344f
+# ╠═528e6bb6-3922-11eb-1961-41fc9fb4a094
 # ╠═cd611ea8-4ba4-11eb-025f-2db195ae152b
 # ╠═5e89f012-4ba5-11eb-3e35-63a1d62e3e94
-# ╟─96121a84-3924-11eb-1cbb-0de4f3c73b0c
+# ╠═96121a84-3924-11eb-1cbb-0de4f3c73b0c
 # ╠═ef664078-3925-11eb-3b3d-438868228269
 # ╠═3ebe6c74-3926-11eb-2a01-f951f7a6849c
 # ╠═4a8101aa-3926-11eb-1d4b-0721530a9423
 # ╠═57fd3a7e-3926-11eb-0e3f-858f616cea60
 # ╟─0ea7faf0-4acc-11eb-2ffd-7bf66092c013
 # ╠═cd647910-4acb-11eb-2ee7-972c711247dc
-# ╟─99e83cd8-3929-11eb-0a0e-e1d5780c77b4
+# ╠═99e83cd8-3929-11eb-0a0e-e1d5780c77b4
 # ╠═43d816ce-4a40-11eb-1647-f37930d8eb8a
 # ╠═797e08be-4a41-11eb-0c4e-1df9d65735b6
 # ╠═ccbd3738-53dc-11eb-27cb-4daae45f3216
 # ╠═794f97cc-4a41-11eb-08f6-e1487743247d
 # ╟─893b0544-4ace-11eb-37d7-6da2eb2ec12d
 # ╠═3c77c182-4acb-11eb-22c5-9f100c192b0d
-# ╟─96aef858-53dd-11eb-2b07-d17a14c76ed5
+# ╠═96aef858-53dd-11eb-2b07-d17a14c76ed5
 # ╠═14ca4132-53e5-11eb-2027-75733a1fac04
-# ╟─552d6304-53e4-11eb-125b-c18befd4ba5e
-# ╟─9eaf316c-53dd-11eb-0d26-9f045503a6b6
-# ╟─029d10ca-53e5-11eb-329b-f73a2fbce197
-# ╟─62148508-3926-11eb-34d2-a7bedab25f30
+# ╠═552d6304-53e4-11eb-125b-c18befd4ba5e
+# ╠═9eaf316c-53dd-11eb-0d26-9f045503a6b6
+# ╠═029d10ca-53e5-11eb-329b-f73a2fbce197
+# ╠═62148508-3926-11eb-34d2-a7bedab25f30
 # ╠═c01c2eb6-4acf-11eb-2a85-2fe31d094684
-# ╟─9ea1d47e-53e5-11eb-0ab5-117b5c7a8422
+# ╠═9ea1d47e-53e5-11eb-0ab5-117b5c7a8422
 # ╠═c59a49de-5889-11eb-14a7-afabd132719b
-# ╟─f653f67e-588c-11eb-01d4-5f3c896ed5b2
+# ╠═f653f67e-588c-11eb-01d4-5f3c896ed5b2
 # ╠═bc5228ce-5891-11eb-29eb-e9bbf5ed0510
-# ╟─480897d2-588c-11eb-2894-699a81fc1358
+# ╠═480897d2-588c-11eb-2894-699a81fc1358
 # ╠═9ea0f536-579b-11eb-1709-95271e9a775e
-# ╟─32e76378-588d-11eb-0cfe-79706afc57f4
+# ╠═32e76378-588d-11eb-0cfe-79706afc57f4
 # ╠═1ccd9a18-5889-11eb-3a76-b10e73357829
-# ╟─b5b7abd2-588d-11eb-17f0-8dd8860d441a
+# ╠═b5b7abd2-588d-11eb-17f0-8dd8860d441a
 # ╠═e18b2054-588d-11eb-30a3-3b339c1370b3
-# ╟─e8d40100-588d-11eb-16dc-77fd936d9f44
+# ╠═e8d40100-588d-11eb-16dc-77fd936d9f44
 # ╠═3474dc06-5889-11eb-28a6-b19e3b392af8
-# ╟─1a5d9a88-588e-11eb-2b0c-3115e94329db
-# ╟─4f019f5e-5894-11eb-0810-d343b6345fc6
-# ╟─d4ff40a4-5b85-11eb-1216-ed4c6029426c
-# ╟─5acdb270-5b85-11eb-3590-afaf2ac61d88
-# ╟─51d81924-59b1-11eb-2ead-ed5d20387bf5
+# ╠═1a5d9a88-588e-11eb-2b0c-3115e94329db
+# ╠═4f019f5e-5894-11eb-0810-d343b6345fc6
+# ╠═d4ff40a4-5b85-11eb-1216-ed4c6029426c
+# ╠═5acdb270-5b85-11eb-3590-afaf2ac61d88
+# ╠═51d81924-59b1-11eb-2ead-ed5d20387bf5
 # ╠═5782615c-59b1-11eb-360a-456b2589478c
