@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.12.21
+# v0.14.0
 
 using Markdown
 using InteractiveUtils
@@ -23,18 +23,18 @@ begin
 		Pkg.Registry.update()
 		
 		# Download packages
-		Pkg.add(Pkg.PackageSpec(; name="PlutoUI"))
+		Pkg.add("PlutoUI")
 		Pkg.add("MLDataPattern")
 		Pkg.add("Glob")
 		Pkg.add("NIfTI")
 		Pkg.add("DLPipelines")
-		Pkg.add(Pkg.PackageSpec(; name="DataAugmentation", url="https://github.com/Dale-Black/DataAugmentation.jl.git")) # local fork of DataAugmentation.jl
-		# Pkg.add("DataAugmentation")
+		Pkg.add("DataAugmentation")
 		Pkg.add("Plots")
 		Pkg.add("DataLoaders")
 		Pkg.add("Random")
 		Pkg.add("Flux")
 		Pkg.add("FluxTraining")
+		Pkg.add("ImageCore")
 	end
 	
 	# Import packages
@@ -44,12 +44,19 @@ begin
 	using NIfTI
 	using DLPipelines
 	using DataAugmentation
+	using DataAugmentation: apply, RandomResizeCrop, CenterResizeCrop, ImageToTensor,
+		NormalizeIntensity, OneHot, Image, itemdata, MaskMulti
 	using Plots
 	using DataLoaders
 	using Random
 	using Flux
-	using FluxTraining
+	using ImageCore
 end
+
+# ╔═╡ 104240bb-0365-4759-ada3-90de6afb9656
+md"""
+# Deep Learning With Flux: Heart Segmentation Tutorial
+"""
 
 # ╔═╡ 8446a07c-8f4b-11eb-23d6-9b5e1c7d622e
 TableOfContents()
@@ -61,7 +68,7 @@ md"""
 
 # ╔═╡ 7356a9e4-8f4c-11eb-0dd5-bfcd8c56dee2
 md"""
-## Set up directory and dataset
+## Set up directory
 
 * Publicly available for download though [Monai](https://docs.monai.io/en/latest/_modules/monai/data/dataset.html) or
 * Publicly available for download through the original [Medical Decathlon Segmentation challenge](http://medicaldecathlon.com/)
@@ -83,9 +90,9 @@ end
 # ╔═╡ 82f4d65c-8f4c-11eb-08f7-8b16f7f49135
 begin
 	MLDataPattern.nobs(ds::imagesTr) = length(ds.files)
-	MLDataPattern.getobs(ds::imagesTr, idx::Int) = (NIfTI.niread(ds.files[idx]).raw)
+	MLDataPattern.getobs(ds::imagesTr, idx::Int) = NIfTI.niread(ds.files[idx]).raw
 	MLDataPattern.nobs(ds::labelsTr) = length(ds.files)
-	MLDataPattern.getobs(ds::labelsTr, idx::Int) = (NIfTI.niread(ds.files[idx]).raw)
+	MLDataPattern.getobs(ds::labelsTr, idx::Int) = NIfTI.niread(ds.files[idx]).raw
 end;
 
 # ╔═╡ 6ad8c12c-8f4d-11eb-2a1d-2b35048f4a0b
@@ -110,8 +117,8 @@ end
 
 # ╔═╡ 38dfcad4-8f4e-11eb-06bd-13a47c425053
 md"""
-## Set up data processing
-* Follow [this workflow](https://www.notion.so/Deep-learning-workflow-Ecosystem-overview-c5648bd1951b404d911fe705eced0e41)
+## Set up data loading pipelines
+* Follow [this workflow](https://www.notion.so/Deep-learning-workflow-Ecosystem-overview-c5648bd1951b404d911fe705eced0e41) with some modifications
 """
 
 # ╔═╡ da0136e4-8f50-11eb-3318-f99425553e1e
@@ -124,11 +131,38 @@ struct ImageSegmentationSimple <: DLPipelines.LearningMethod{ImageSegmentationTa
 	imagesize
 end
 
+# ╔═╡ 197d2bb2-f72b-461e-a46a-e5ac303cb28d
+md"""
+### Create `AddChannel()` transform
+We are working with 3D grayscale images that need to be fed into a neural net as `size = (x, y, z, 1)`
+"""
+
+# ╔═╡ 1070b8f8-2fa4-4612-a520-af71459582a1
+struct MapItemData <: Transform
+    f
+end
+
+# ╔═╡ 19f869d4-f4b5-4aae-959e-eb4f0ef8c401
+begin
+	DataAugmentation.apply(tfm::MapItemData, item::DataAugmentation.AbstractItem; randstate = nothing) = DataAugmentation.setdata(item, tfm.f(itemdata(item)))
+	
+	DataAugmentation.apply(tfm::MapItemData, item::DataAugmentation.Image; randstate = nothing) = DataAugmentation.setdata(item, tfm.f(itemdata(item)))
+end
+
+# ╔═╡ fd999115-2464-46a1-8e34-f8cfbbc1ee35
+AddChannel() = MapItemData(a -> reshape(a, size(a)..., 1))
+
 # ╔═╡ 3dc50780-8f4e-11eb-3f29-c74b44dd1528
 begin
 	imsize = (112, 112, 96)
 	method = ImageSegmentationSimple(imsize)
 end;
+
+# ╔═╡ be0aa160-64ed-4499-91a7-f011990862a5
+md"""
+### Set up `ecodeinput()` pipelines
+Both the training set and the validation set require a pipeline. The validation set should not have any Random transforms whereas the training set can contain random transforms
+"""
 
 # ╔═╡ 15c2e164-8f54-11eb-1315-6b553b75d0ed
 begin
@@ -136,18 +170,24 @@ begin
 			method::ImageSegmentationSimple,
 			context::Training,
 			image)
-		tfm = RandomResizeCrop(method.imagesize) |> NormalizeIntensity() |> AddChannel()
-		return apply(tfm, Image(image)) |> itemdata
+		tfm = RandomResizeCrop(method.imagesize) |> ImageToTensor() |> NormalizeIntensity() |> AddChannel() 
+		return apply(tfm, Image(ImageCore.colorview(Gray, image))) |> itemdata
 	end
 	
 	function DLPipelines.encodeinput(
 			method::ImageSegmentationSimple,
 			context::Validation,
 			image)
-		tfm = CenterResizeCrop(method.imagesize) |> NormalizeIntensity() |> AddChannel()
-		return apply(tfm, Image(image)) |> itemdata
+		tfm = CenterResizeCrop(method.imagesize) |> ImageToTensor() |> NormalizeIntensity() |> AddChannel() 
+		return apply(tfm, Image(ImageCore.colorview(Gray, image))) |> itemdata
 	end
 end
+
+# ╔═╡ d9a3589a-2c7a-4caf-8e62-54a6dd95dff9
+md"""
+### Set up `ecodetarget()` pipelines
+Both the training set and the validation set require a pipeline. The validation set should not have any Random transforms whereas the training set can contain random transforms
+"""
 
 # ╔═╡ 590980a8-90d8-11eb-275b-b3eba753c87e
 begin
@@ -168,6 +208,11 @@ begin
 	end
 end
 
+# ╔═╡ 3443266e-5d97-44b8-96a7-43eefb42c7c6
+md"""
+### Set up dataset
+"""
+
 # ╔═╡ 31c6e194-8f54-11eb-1e50-df59322c9a29
 begin
 	methoddata_train = DLPipelines.MethodDataset(train_files, method, Training())
@@ -176,7 +221,7 @@ end;
 
 # ╔═╡ 3afa3c22-8f54-11eb-0439-15fcbcfabfc8
 md"""
-Double check that the data processing works as expected. After applying the transforms, the first images `(x, y)` should now be of `size = (112, 112, 96, 1)`
+Double check that the data processing works as expected. After applying the transforms, the first images `x, y` should now be of `size = (112, 112, 96, 1)`
 
 *Note `imsize...` is the same as `(112, 112, 96)`*
 """
@@ -186,6 +231,12 @@ let
 	x, y = MLDataPattern.getobs(methoddata_train, 1)
 	@assert size(x) == (imsize..., 1)
 	@assert size(y) == (imsize..., 2)
+end
+
+# ╔═╡ acd6a86a-c6ad-4c08-8c3d-dbe0424e7d6a
+let
+	x, y = MLDataPattern.getobs(methoddata_train, 1)
+	size(x)
 end
 
 # ╔═╡ 46b192c8-90a9-11eb-1b7d-954c786d4a7e
@@ -202,10 +253,10 @@ $(@bind a Slider(1:96, default=62, show_value=true))
 """
 
 # ╔═╡ 716f8acc-90a9-11eb-2889-53a02559cd8a
-heatmap(x[:, :, a, 1], c = :grays)
+Plots.heatmap(x[:, :, a, 1], c = :grays)
 
 # ╔═╡ 7f8f83d2-90a9-11eb-30f7-7d71a11e1bc7
-heatmap(y[:, :, a, 2], c = :grays)
+Plots.heatmap(y[:, :, a, 2], c = :grays)
 
 # ╔═╡ 02b9268a-90ac-11eb-1d12-915cce1e75c4
 md"""
@@ -302,44 +353,36 @@ begin
 end;
 
 # ╔═╡ 9d416b26-90ad-11eb-2c5f-f56340e14275
-begin
-	max_epochs = 3
-	epoch_loss_values = []
-	metric_values = []
+# begin
+# 	max_epochs = 1
+# 	epoch_loss_values = []
+# 	metric_values = []
 
-	for epoch in 1:max_epochs
-		epoch_loss = 0
-		steps = 0
+# 	for epoch in 1:max_epochs
+# 		epoch_loss = 0
+# 		steps = 0
 		
-		# Training loop for training data
-		for (xs, ys) in train_loader
-			steps += 1
-			gs = Flux.gradient(ps) do
-				ŷs = model(xs)
-				loss = loss_function(ŷs[:, :, :, 2, :], ys[:, :, :, 2, :])
-				epoch_loss += loss
-				return loss
-			end
-			Flux.update!(optimizer, ps, gs)
-		end
-		
-		# Training loop for validation data
-		epoch_loss = (epoch_loss / steps)
-		push!(epoch_loss_values, epoch_loss)
-	end
-end
+# 		# Training loop for training data
+# 		for (xs, ys) in train_loader
+# 			steps += 1
+# 			gs = Flux.gradient(ps) do
+# 				ŷs = model(xs)
+# 				loss = loss_function(ŷs[:, :, :, 2, :], ys[:, :, :, 2, :])
+# 				epoch_loss += loss
+# 				return loss
+# 			end
+# 			Flux.update!(optimizer, ps, gs)
+# 		end
+# 		epoch_loss = (epoch_loss / steps)
+# 		push!(epoch_loss_values, epoch_loss)
+# 	end
+# end
 
 # ╔═╡ bb4bc040-90ed-11eb-3893-1ff7940dcdf7
 epoch_loss_values
 
-# ╔═╡ fb2a09e0-90a9-11eb-128c-378939f6dc1c
-#= md"""
-## Train model using FluxTraining
-
-Utilize [FluxTraining.jl](https://github.com/lorenzoh/FluxTraining.jl) to simplify the training loop
-""" =#
-
 # ╔═╡ Cell order:
+# ╟─104240bb-0365-4759-ada3-90de6afb9656
 # ╠═8446a07c-8f4b-11eb-23d6-9b5e1c7d622e
 # ╟─b4223cbc-8f4a-11eb-2b76-edbdadc14c1b
 # ╠═eea07192-8f4a-11eb-3996-0d0c407319d8
@@ -356,12 +399,20 @@ Utilize [FluxTraining.jl](https://github.com/lorenzoh/FluxTraining.jl) to simpli
 # ╟─38dfcad4-8f4e-11eb-06bd-13a47c425053
 # ╠═da0136e4-8f50-11eb-3318-f99425553e1e
 # ╠═b51c926c-8f4e-11eb-0a3c-65df9e8b2f0c
+# ╟─197d2bb2-f72b-461e-a46a-e5ac303cb28d
+# ╠═1070b8f8-2fa4-4612-a520-af71459582a1
+# ╠═19f869d4-f4b5-4aae-959e-eb4f0ef8c401
+# ╠═fd999115-2464-46a1-8e34-f8cfbbc1ee35
 # ╠═3dc50780-8f4e-11eb-3f29-c74b44dd1528
+# ╟─be0aa160-64ed-4499-91a7-f011990862a5
 # ╠═15c2e164-8f54-11eb-1315-6b553b75d0ed
+# ╟─d9a3589a-2c7a-4caf-8e62-54a6dd95dff9
 # ╠═590980a8-90d8-11eb-275b-b3eba753c87e
+# ╟─3443266e-5d97-44b8-96a7-43eefb42c7c6
 # ╠═31c6e194-8f54-11eb-1e50-df59322c9a29
 # ╟─3afa3c22-8f54-11eb-0439-15fcbcfabfc8
 # ╠═3e163f28-8f54-11eb-0af0-ddcbab45cb82
+# ╠═acd6a86a-c6ad-4c08-8c3d-dbe0424e7d6a
 # ╟─46b192c8-90a9-11eb-1b7d-954c786d4a7e
 # ╠═4c67e90e-90a9-11eb-26df-cb5b22a1991d
 # ╟─60a80e7e-90a9-11eb-1bbb-41ef1c27ef25
@@ -381,4 +432,3 @@ Utilize [FluxTraining.jl](https://github.com/lorenzoh/FluxTraining.jl) to simpli
 # ╠═311fd450-90ad-11eb-0f74-ad86115baf94
 # ╠═9d416b26-90ad-11eb-2c5f-f56340e14275
 # ╠═bb4bc040-90ed-11eb-3893-1ff7940dcdf7
-# ╟─fb2a09e0-90a9-11eb-128c-378939f6dc1c
