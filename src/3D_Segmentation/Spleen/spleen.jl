@@ -15,36 +15,42 @@ end
 
 # ╔═╡ cd611ea8-4ba4-11eb-025f-2db195ae152b
 begin
+	let
+		# Set up temporary environment
+		env = mktempdir()
+		import Pkg
+		Pkg.activate(env)
+		Pkg.Registry.update()
+		
+		# Download packages
+		Pkg.add("PlutoUI")
+		Pkg.add("MLDataPattern")
+		Pkg.add("Glob")
+		Pkg.add("NIfTI")
+		Pkg.add("DLPipelines")
+		Pkg.add("DataAugmentation")
+		Pkg.add("Plots")
+		Pkg.add("DataLoaders")
+		Pkg.add("Random")
+		Pkg.add("Flux")
+		Pkg.add("FluxTraining")
+		Pkg.add("ImageCore")
+	end
 	
-	
-	using Pkg
-	Pkg.activate(".")
-	
-	### Uncomment the lines below to install packages. Only neccessary once
-	
-	# ] add NIfTI
-	# ] add Glob
-	# ] add MLDataPattern
-	# ] add https://github.com/lorenzoh/DLPipelines.jl
-	# ] add https://github.com/lorenzoh/DataAugmentation.jl.git
-	# ] add PlutoUI
-	# ] add Plots
-	# ] add Flux
-	# ] add Functors
-	
-	
-	using NIfTI
-	using Glob
+	# Import packages
+	using PlutoUI
 	using MLDataPattern
+	using Glob
+	using NIfTI
 	using DLPipelines
 	using DataAugmentation
-	using Random: seed!
-	using PlutoUI
+	using DataAugmentation: apply, RandomResizeCrop, CenterResizeCrop, ImageToTensor,
+		NormalizeIntensity, OneHot, Image, itemdata, MaskMulti
 	using Plots
+	using DataLoaders
+	using Random
 	using Flux
-	using Functors
-	
-	
+	using ImageCore
 end
 
 # ╔═╡ 27add6de-3922-11eb-0955-156a939a344f
