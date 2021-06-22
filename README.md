@@ -3,7 +3,7 @@
 This repo is heavily inspired by [Monai-Tutorials](https://github.com/Project-MONAI/tutorials)
 
 ## 3D Segmentation
-* Heart (mostly complete)
+* Heart
   * Source code: [link](https://github.com/Dale-Black/MedicalTutorials.jl/blob/master/src/3D_Segmentation/Heart/tutorial_seg_heart.jl)
   * HTML: [link](https://dale-black.github.io/MedicalTutorials.jl/src/3D_Segmentation/Heart/tutorial_seg_heart.jl.html)
 
