@@ -47,6 +47,7 @@ TableOfContents()
 # ╔═╡ 3cfef02c-00f4-48e9-90b1-4ad43472f397
 md"""
 ## Load data
+Part of the [Medical Decathlon Dataset](http://medicaldecathlon.com/)
 """
 
 # ╔═╡ 92776990-345c-4abc-82ad-3cec0bee356f

@@ -56,6 +56,7 @@ TableOfContents()
 # ╔═╡ 5f77cbb8-26a4-4287-b4a3-c9c1158f8d1f
 md"""
 ## Load data
+Part of the [Medical Decathlon Dataset](http://medicaldecathlon.com/)
 """
 
 # ╔═╡ 7ec89eaf-7eca-47d9-90fc-c6b9fa241f2e
@@ -178,7 +179,7 @@ end
 
 # ╔═╡ ac774864-f414-48b2-a166-a5bdd722b199
 md"""
-## Plot data
+## Visualize
 """
 
 # ╔═╡ 46a375aa-b645-4cd6-9363-eeec2a6ef740
@@ -270,7 +271,7 @@ end
 
 # ╔═╡ fc0b4656-eb18-4284-9cd6-4a3510df818b
 md"""
-## Train model
+## Train
 """
 
 # ╔═╡ dd338b37-6036-4958-9feb-f926b9e1599f
