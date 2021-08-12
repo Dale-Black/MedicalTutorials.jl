@@ -4,7 +4,3 @@ This repo is heavily inspired by [Monai-Tutorials](https://github.com/Project-MO
 
 ## 3D Segmentation
 * Heart
-
-* Brain (TODO)
-
-## (TODO) 3D Classification
