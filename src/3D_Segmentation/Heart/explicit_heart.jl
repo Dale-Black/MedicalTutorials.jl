@@ -55,7 +55,7 @@ TableOfContents()
 
 # ╔═╡ 5f77cbb8-26a4-4287-b4a3-c9c1158f8d1f
 md"""
-## Create dataset
+## Load data
 """
 
 # ╔═╡ 7ec89eaf-7eca-47d9-90fc-c6b9fa241f2e

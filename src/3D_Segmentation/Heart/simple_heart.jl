@@ -72,9 +72,12 @@ md"""
 ## Create `BlockMethod`
 """
 
+# ╔═╡ 540d5e85-e240-4bb4-b638-282a87a2a64f
+classes = [0, 1]
+
 # ╔═╡ c18af89c-87d6-44ac-abd1-02d51478b0b8
 method = BlockMethod(
-    (FastAI.Image{3}(), Mask{3}([0, 1]),
+    (FastAI.Image{3}(), FastAI.Mask{3}(classes),
     (ProjectiveTransforms((64, 64, 64)), ImagePreprocessing(), OneHot()),
 ))
 
@@ -156,6 +159,7 @@ md"""
 # ╠═1a3599d3-2b2e-4a13-8f82-403894bba395
 # ╠═58ad98fc-768a-469e-baf3-decf7cd9fd8f
 # ╟─2313ccd1-3aa5-4c6f-926f-c86579b58cf0
+# ╠═540d5e85-e240-4bb4-b638-282a87a2a64f
 # ╠═c18af89c-87d6-44ac-abd1-02d51478b0b8
 # ╟─f273e655-aeee-448a-ac02-a5d49ed9a34d
 # ╠═24b7bb14-69a4-4c1c-af80-4a328af1296c
