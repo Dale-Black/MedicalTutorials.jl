@@ -213,6 +213,9 @@ end
 # 	@assert size(ys) == (image_size..., 2, 2)
 # end
 
+# ╔═╡ 5dfeca5d-eefb-48af-9c7e-6a175eb31f85
+train_loader[1]
+
 # ╔═╡ 608f919d-a5e4-4782-8620-2a2079955989
 md"""
 ## Create  model
@@ -343,33 +346,6 @@ end
 #     end
 # end
 
-# ╔═╡ d1305a5e-201f-453c-a82a-629d82c7f5a8
-md"""
-## Create dataloaders
-"""
-
-# ╔═╡ 66dd57fb-f03e-4d72-ab4a-8aa2d2e6c397
-batchsize = 2
-
-# ╔═╡ 28f2a867-b1e2-4003-8255-5ca21cb421f8
-traindl, validdl = methoddataloaders(data, method, batchsize)
-
-# ╔═╡ be19b6b9-5ecf-4e6f-87aa-9a49ac4552e8
-md"""
-## Create learner
-"""
-
-# ╔═╡ 2c3a0eb8-fe32-4e59-a2c7-7da268207869
-learner = Learner(model, (traindl, validdl), optimizer, loss_function)
-
-# ╔═╡ df9b1c9d-c6c0-459f-9ac0-e6e84eb47cae
-md"""
-## Train
-"""
-
-# ╔═╡ 387c737e-5478-4668-ad6e-562f8caeeb49
-# fitonecycle!(learner, 1)
-
 # ╔═╡ Cell order:
 # ╠═514a8cf8-15ff-4896-8905-3afcaa8b4d3a
 # ╠═48f904bc-af7c-46b0-84a6-f0f45fcffd7d
@@ -397,6 +373,7 @@ md"""
 # ╟─14a23b5f-8cbf-47d5-a428-995ddbf9d239
 # ╠═5449c0d1-22f4-44b3-a7f5-09a7829aebf2
 # ╠═af3a74ab-3bec-466e-9d00-2c19f092654d
+# ╠═5dfeca5d-eefb-48af-9c7e-6a175eb31f85
 # ╟─608f919d-a5e4-4782-8620-2a2079955989
 # ╠═f3d86bf5-ea8a-4c86-957d-6cbfbd5727a2
 # ╠═239ec2b2-1948-4ecf-a082-e25d8686b33d
@@ -407,10 +384,3 @@ md"""
 # ╠═dd338b37-6036-4958-9feb-f926b9e1599f
 # ╠═2f69eaea-9a54-411e-84bc-466cc3a90738
 # ╠═764ebf3a-1172-420b-96dc-3bdf645e8f3d
-# ╟─d1305a5e-201f-453c-a82a-629d82c7f5a8
-# ╠═66dd57fb-f03e-4d72-ab4a-8aa2d2e6c397
-# ╠═28f2a867-b1e2-4003-8255-5ca21cb421f8
-# ╟─be19b6b9-5ecf-4e6f-87aa-9a49ac4552e8
-# ╠═2c3a0eb8-fe32-4e59-a2c7-7da268207869
-# ╟─df9b1c9d-c6c0-459f-9ac0-e6e84eb47cae
-# ╠═387c737e-5478-4668-ad6e-562f8caeeb49

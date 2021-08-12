@@ -208,6 +208,14 @@ end
 # ╔═╡ 83c1f0db-0526-407e-a620-3d913061da66
 learner = Learner(model, (traindl, validdl), optimizer, loss_function)
 
+# ╔═╡ 103ceb8d-995c-483f-863c-dd4e1f397f3f
+md"""
+## Train
+"""
+
+# ╔═╡ d60a4eee-b796-4f4b-bef8-99df74db4d3a
+# fitonecycle!(learner, 1)
+
 # ╔═╡ Cell order:
 # ╠═514ab1cc-fb98-11eb-2a1e-c7b264f7066c
 # ╠═5b2ed761-eb57-44c2-9ed9-bc1e5240af16
@@ -233,3 +241,5 @@ learner = Learner(model, (traindl, validdl), optimizer, loss_function)
 # ╟─ca6a29dc-55b8-4238-9ea8-6da9e0372158
 # ╠═63a851e5-33bd-4756-aa49-d4f872020afc
 # ╠═83c1f0db-0526-407e-a620-3d913061da66
+# ╟─103ceb8d-995c-483f-863c-dd4e1f397f3f
+# ╠═d60a4eee-b796-4f4b-bef8-99df74db4d3a
