@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.15.1
+# v0.16.0
 
 using Markdown
 using InteractiveUtils
@@ -13,375 +13,309 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ 514a8cf8-15ff-4896-8905-3afcaa8b4d3a
+# ╔═╡ 123c3f17-4a4a-478d-ae0e-5ec7f9d4ad44
 begin
-	let
-		using Pkg
+    let
+        using Pkg
 		Pkg.activate(mktempdir())
-		Pkg.Registry.update()
-		Pkg.add("PlutoUI")
-		Pkg.add("Tar")
-		Pkg.add("MLDataPattern")
-		Pkg.add("Glob")
-		Pkg.add("NIfTI")
-		Pkg.add("DLPipelines")
-		Pkg.add("DataAugmentation")
-		Pkg.add("CairoMakie")
-		Pkg.add("ImageCore")
-		Pkg.add("DataLoaders")
-		Pkg.add("Flux")
-		Pkg.add("CUDA")
-		Pkg.add(url="https://github.com/FluxML/FastAI.jl")
-	end
-	
-	using PlutoUI
-	using Tar
-	using MLDataPattern
-	using Glob
-	using NIfTI
-	using DLPipelines
-	using DataAugmentation
-	using DataAugmentation: OneHot, Image
-	using CairoMakie
-	using ImageCore
-	using DataLoaders
-	using Flux
-	using CUDA
-	using FastAI
+        Pkg.Registry.update()
+        Pkg.add("PlutoUI")
+        Pkg.add("Tar")
+        Pkg.add("MLDataPattern")
+        Pkg.add("Glob")
+        Pkg.add("NIfTI")
+        Pkg.add("DataAugmentation")
+        Pkg.add("CairoMakie")
+        Pkg.add("ImageCore")
+        Pkg.add("DataLoaders")
+        # Pkg.add("CUDA")
+        Pkg.add("FastAI")
+        Pkg.add("StaticArrays")
+    end
+
+    using PlutoUI
+    using Tar
+    using MLDataPattern
+    using Glob
+    using NIfTI
+    using DataAugmentation
+    using DataAugmentation: OneHot, Image
+    using CairoMakie
+    using ImageCore
+    using DataLoaders
+    # using CUDA
+    using FastAI
+    using StaticArrays
 end
 
-# ╔═╡ 48f904bc-af7c-46b0-84a6-f0f45fcffd7d
+# ╔═╡ d781f284-16c1-4505-9f5a-dbd90c0334d2
 TableOfContents()
 
-# ╔═╡ 5f77cbb8-26a4-4287-b4a3-c9c1158f8d1f
+# ╔═╡ 6e2a1536-e659-4366-93de-ac7d2e7a27a4
 md"""
 ## Load data
 Part of the [Medical Decathlon Dataset](http://medicaldecathlon.com/)
 """
 
-# ╔═╡ 7ec89eaf-7eca-47d9-90fc-c6b9fa241f2e
-data_dir = "/Users/daleblack/Google Drive/Datasets/Task02_Heart"
+# ╔═╡ 855407b1-b8ce-465f-8531-1af5d014abe9
+data_dir = raw"/Users/daleblack/Google Drive/Datasets/Task02_Heart"
 
-# ╔═╡ 4294429e-e29e-4986-b0d7-66d8a1d7d3a5
+# ╔═╡ 4cefe3ca-d7f1-4b2a-b63c-e39d734d2514
 function loadfn_label(p)
-	a = NIfTI.niread(string(p)).raw
-	convert_a = convert(Array{UInt8}, a)
-	return convert_a
+    a = NIfTI.niread(string(p)).raw
+    convert_a = convert(Array{UInt8}, a)
+    convert_a = convert_a .+ 1
+    return convert_a
 end
 
-# ╔═╡ 3dc4d917-357f-4bf5-8554-e4ddf08bdc2c
+# ╔═╡ 838a17df-7479-42c2-a2c5-ce626a4016fe
 function loadfn_image(p)
-	a = NIfTI.niread(string(p)).raw
-	convert_a = convert(Array{Float32}, a)
-	return convert_a
+    a = NIfTI.niread(string(p)).raw
+
+    convert_a = convert(Array{Float32}, a)
+    convert_a = convert_a/max(convert_a...)
+    return convert_a
 end
 
-# ╔═╡ ae9ad741-39f8-4991-bd90-9516f3f9ba10
+# ╔═╡ 11d5a9b4-fdc3-48e4-a6ad-f7dec5fabb8b
 begin
-	
-	niftidata_image(dir) = mapobs(loadfn_image, Glob.glob("*.nii*", dir))
-	niftidata_label(dir) =  mapobs(loadfn_label, Glob.glob("*.nii*", dir))
-	data = (
-		niftidata_image(joinpath(data_dir, "imagesTr")),
-		niftidata_label(joinpath(data_dir, "labelsTr")),
-	)
-	train_files, val_files = splitobs(data, 0.75)
+    niftidata_image(dir) = mapobs(loadfn_image, Glob.glob("*.nii*", dir))
+    niftidata_label(dir) =  mapobs(loadfn_label, Glob.glob("*.nii*", dir))
+    data = (
+        niftidata_image(joinpath(data_dir, "imagesTr")),
+        niftidata_label(joinpath(data_dir, "labelsTr")),
+    )
 end
 
-# ╔═╡ 6a7bc2b9-786f-4d8f-b546-883961fbe36e
+# ╔═╡ 349d843a-4a5f-44d7-9371-38c140b9972d
 md"""
 ## Create learning method
 """
 
-# ╔═╡ b19eddb1-22c3-42b7-ab57-ecca033e0198
+# ╔═╡ 778cc0f9-127c-4d4b-a7de-906dfcc29cae
+train_files, val_files = MLDataPattern.splitobs(data, 0.8)
+
+# ╔═╡ 019e666e-e2e4-4e0b-a225-b346c7c70939
 struct ImageSegmentationSimple <: DLPipelines.LearningMethod
     imagesize
 end
 
-# ╔═╡ 1e984c9f-0d87-45db-9a12-c182d1f47856
+# ╔═╡ f7274fa9-8231-44fd-8d00-1c7ab7fc855c
 image_size = (112, 112, 96)
 
-# ╔═╡ 11fc9a9a-f0e4-4df9-a5c4-2e6404dbd86f
+# ╔═╡ 9ac18928-9fe4-46ed-ab9c-916791739157
 method = ImageSegmentationSimple(image_size)
 
-# ╔═╡ a3e23cd9-476f-49f5-8477-a4ce6c7fc7cb
+# ╔═╡ 854f8bc8-ebe3-4d65-bf5a-417b16ea94fb
 md"""
 ### Set up `AddChannel` transform
 """
 
-# ╔═╡ a514108d-e739-4c12-8d42-7a900bc23987
+# ╔═╡ f461d63a-c5e6-4450-a80c-e15b6c2a56c0
 struct MapItemData <: Transform
     f
 end
 
-# ╔═╡ ae250c91-99c0-41aa-9445-f3b24eac6dcf
+# ╔═╡ ea9b74d8-89f0-4b02-b605-8d12c6becff0
 begin
-	DataAugmentation.apply(tfm::MapItemData, item::DataAugmentation.AbstractItem; randstate = nothing) = DataAugmentation.setdata(item, tfm.f(itemdata(item)))
-	DataAugmentation.apply(tfm::MapItemData, item::DataAugmentation.Image; randstate = nothing) = DataAugmentation.setdata(item, tfm.f(itemdata(item)))
+  DataAugmentation.apply(tfm::MapItemData, item::DataAugmentation.AbstractItem; randstate = nothing) = DataAugmentation.setdata(item, tfm.f(itemdata(item)))
+  DataAugmentation.apply(tfm::MapItemData, item::DataAugmentation.Image; randstate = nothing) = DataAugmentation.setdata(item, tfm.f(itemdata(item)))
 end
 
-# ╔═╡ a4fe5e5a-3e6a-4a73-9d4f-39fcde1aa7f8
+# ╔═╡ fe1123dd-7228-4fe4-8dca-d081cbbfda95
 AddChannel() = MapItemData(a -> reshape(a, size(a)..., 1))
 
-# ╔═╡ 57e35785-3639-4f68-b993-3cecd26369a4
+# ╔═╡ edf2b37a-2775-44c0-8d2e-5e2350b454c4
 md"""
 ### Set up `encode` pipelines
 """
 
-# ╔═╡ bd717212-ccf8-41f3-9da2-059a5129008b
+# ╔═╡ 7cf0cc6b-8ff9-4198-9646-9d0787e1013d
 begin
-	function DLPipelines.encode(
-			method::ImageSegmentationSimple,
-			context::Training,
-			(image, target)::Union{Tuple, NamedTuple}
-			)
-		
-		tfm_proj = RandomResizeCrop(method.imagesize)
-		tfm_im = DataAugmentation.compose(
-			ImageToTensor(),
-			NormalizeIntensity(),
-			# AddChannel()
-			)
-		tfm_mask = OneHot()
-		
-		items = Image(ImageCore.colorview(Gray, image)), MaskMulti(target .+ 1)
-		item_im, item_mask = apply(tfm_proj, (items))
-		
-		return apply(tfm_im, item_im), apply(tfm_mask, item_mask)
-	end
+  function DLPipelines.encode(
+          method::ImageSegmentationSimple,
+          context::Training,
+          (image, target)::Union{Tuple, NamedTuple}
+          )
 
-	function DLPipelines.encode(
-			method::ImageSegmentationSimple,
-			context::Validation,
-			(image, target)::Union{Tuple, NamedTuple}
-			)
-		
-		tfm_proj = CenterResizeCrop(method.imagesize)
-		tfm_im = DataAugmentation.compose(
+      tfm_proj = RandomResizeCrop(method.imagesize)
+      tfm_im = DataAugmentation.compose(
 			ImageToTensor(),
 			NormalizeIntensity(),
-			# AddChannel()
-			)
-		tfm_mask = OneHot()
-		
-		items = Image(ImageCore.colorview(Gray, image)), MaskMulti(target .+ 1)
-		item_im, item_mask = apply(tfm_proj, (items))
-		
-		return apply(tfm_im, item_im), apply(tfm_mask, item_mask)
-	end
+			AddChannel()
+          )
+      tfm_mask = OneHot()
+
+      items = Image(Gray.(image)), MaskMulti(target)
+      item_im, item_mask = apply(tfm_proj, (items))
+
+      return apply(tfm_im, item_im), apply(AddChannel(), apply(tfm_mask, item_mask))
+  end
+
+  function DLPipelines.encode(
+          method::ImageSegmentationSimple,
+          context::Validation,
+          (image, target)::Union{Tuple, NamedTuple}
+          )
+
+      tfm_proj = CenterResizeCrop(method.imagesize)
+      tfm_im = DataAugmentation.compose(
+          ImageToTensor(),
+          NormalizeIntensity(),
+          AddChannel()
+          )
+      tfm_mask = OneHot()
+
+      items = Image(Gray.(image)), MaskMulti(target)
+      item_im, item_mask = apply(tfm_proj, (items))
+
+      return apply(tfm_im, item_im), apply(AddChannel(), apply(tfm_mask, item_mask))
+  end
 end
 
-# ╔═╡ f4a24f2f-2b97-4d19-a221-bea10fc70752
+# ╔═╡ f2a92ff7-0f94-44d9-aba7-4b7db9fa4a56
 begin
 	methoddata_train = DLPipelines.MethodDataset(train_files, method, Training())
 	methoddata_valid = DLPipelines.MethodDataset(val_files, method, Validation())
 end
 
-# ╔═╡ ac774864-f414-48b2-a166-a5bdd722b199
+# ╔═╡ b8b18728-cb5a-445a-809c-986e3965aad3
+let
+    x, y = MLDataPattern.getobs(methoddata_valid, 1)
+    @assert size(x.data) == (image_size..., 1, 1)
+    @assert size(y.data) == (image_size..., 2, 1)
+end
+
+# ╔═╡ bfe051e5-66a3-4b4b-b446-48195d8f3868
 md"""
 ## Visualize
 """
 
-# ╔═╡ 46a375aa-b645-4cd6-9363-eeec2a6ef740
+# ╔═╡ 4b7bff28-ec60-4a9d-8b38-648ab871ed16
 begin
-	x, y = MLDataPattern.getobs(methoddata_train, 3)
-	x, y = x.data, y.data
+    x, y = MLDataPattern.getobs(methoddata_valid, 3)
+    x, y = x.data, y.data
 end;
 
-# ╔═╡ 0f819e4f-538c-4269-b851-6cc43d08fdf2
-@bind a PlutoUI.Slider(1:size(x)[3], default=50, show_value=true)
+# ╔═╡ 08be9516-a44c-4fe5-ac46-f586600d586a
+@bind b PlutoUI.Slider(1:size(x)[3], default=50, show_value=true)
 
-# ╔═╡ e3b91342-550f-4762-828e-9e832b0a43f1
-heatmap(x[:, :, a, 1], colormap=:grays)
+# ╔═╡ e2670a05-2c09-4bd2-b40c-0cc46fef2344
+heatmap(x[:, :, b, 1], colormap=:grays)
 
-# ╔═╡ 4e5fe0d9-389e-4f4a-9838-ac909ae28416
-heatmap(y[:, :, a, 2], colormap=:grays)
+# ╔═╡ 427ff0c3-d773-4099-a483-bb8f7d4b8ba1
+heatmap(y[:, :, b, 2], colormap=:grays)
 
-# ╔═╡ 14a23b5f-8cbf-47d5-a428-995ddbf9d239
+# ╔═╡ 616aa780-cbcf-4bf2-b6c5-a984f2530482
 md"""
-## Create dataloader
+## Create Dataloader
 """
 
-# ╔═╡ 5449c0d1-22f4-44b3-a7f5-09a7829aebf2
+# ╔═╡ bda7309e-ae97-4ac0-96b6-36a776e9215e
 begin
-	train_loader = DataLoaders.DataLoader(methoddata_train, 4)
-	val_loader = DataLoaders.DataLoader(methoddata_valid, 2)
+    train_loader = DataLoaders.DataLoader(methoddata_train, 2)
+    val_loader = DataLoaders.DataLoader(methoddata_valid, 2)
 end
 
-# ╔═╡ af3a74ab-3bec-466e-9d00-2c19f092654d
-# for (xs, ys) in train_loader
-# 	@assert size(xs) == (image_size..., 1, 4)
-# 	@assert size(ys) == (image_size..., 2, 2)
+# ╔═╡ e70816b8-4597-4a54-b4f7-735880df6132
+val_loader
+
+# ╔═╡ 7e7a7905-57e8-4630-a5b5-30895b57d6b4
+traindl, valdl = methoddataloaders(data, method)
+
+# ╔═╡ 1cfae1c4-1531-4ed1-87df-6ca97e610015
+# for (xs, ys) in traindl
+# 	@show size(xs)
+# 	@show size(ys)
 # end
 
-# ╔═╡ 5dfeca5d-eefb-48af-9c7e-6a175eb31f85
-train_loader[1]
+# ╔═╡ 70357c15-d0ee-41b2-a063-7e644e61ae94
+# with_terminal() do
+# 	for (xs, ys) in val_loader
+# 	@show size(xs)
+# 	@show size(ys)
+# 	end
+# end
 
-# ╔═╡ 608f919d-a5e4-4782-8620-2a2079955989
-md"""
-## Create  model
-"""
+# ╔═╡ 9d98ffe5-15b1-434d-bf92-bb35bd0ee831
+# for (xs, ys) in val_loader
+# 	@show size(xs)
+# 	@show size(ys)
+# end
 
-# ╔═╡ f3d86bf5-ea8a-4c86-957d-6cbfbd5727a2
-begin
-	# 3D layer utilities
-	conv = (stride, in, out) -> Conv((3, 3, 3), in=>out, stride=stride, pad=SamePad())
-	tran = (stride, in, out) -> ConvTranspose((3, 3, 3), in=>out, stride=stride, pad=SamePad())
+# ╔═╡ 0c24a134-e25b-4e63-948f-0804e3fffa23
+# for (xs, ys) in train_loader
+# 	@assert size(xs.data) == (image_size..., 1, 4)
+# 	@assert size(ys.data) == (image_size..., 2, 2)
+# end
 
-	conv1 = (in, out) -> Chain(conv(1, in, out), BatchNorm(out), x -> leakyrelu.(x))
-	conv2 = (in, out) -> Chain(conv(2, in, out), BatchNorm(out), x -> leakyrelu.(x))
-	tran2 = (in, out) -> Chain(tran(2, in, out), BatchNorm(out), x -> leakyrelu.(x))
-end
+# ╔═╡ 4abe1a4a-65cd-4bed-bdae-ff31c69c5441
+# begin
+#   for epoch in 1:max_epochs
+#       step = 0
+#       @show epoch
 
-# ╔═╡ 239ec2b2-1948-4ecf-a082-e25d8686b33d
-begin
-	function unet3D(in_chs, lbl_chs)
-		# Contracting layers
-		l1 = Chain(conv1(in_chs, 4))
-		l2 = Chain(l1, conv1(4, 4), conv2(4, 16))
-		l3 = Chain(l2, conv1(16, 16), conv2(16, 32))
-		l4 = Chain(l3, conv1(32, 32), conv2(32, 64))
-		l5 = Chain(l4, conv1(64, 64), conv2(64, 128))
+#       # Loop through training data
+#       for (xs, ys) in train_loader
+#           step += 1
+#           @show step
 
-		# Expanding layers
-		l6 = Chain(l5, tran2(128, 64), conv1(64, 64))
-		l7 = Chain(Parallel(+, l6, l4), tran2(64, 32), conv1(32, 32))
-		l8 = Chain(Parallel(+, l7, l3), tran2(32, 16), conv1(16, 16))
-		l9 = Chain(Parallel(+, l8, l2), tran2(16, 4), conv1(4, 4))
-		l10 = Chain(l9, conv1(4, lbl_chs))
-	end
-end
+#           gs = Flux.gradient(ps) do
+#               ŷs = model(xs)
+#               loss = loss_function(ŷs[:, :, :, 2, :], ys[:, :, :, 2, :])
+#               return loss
+#           end
+#           Flux.update!(optimizer, ps, gs)
+#       end
 
-# ╔═╡ cb0b4939-3dcf-4a51-866d-47653e346e70
-md"""
-#### Helper functions
-"""
+#       # Loop through validation data
+#       if (epoch + 1) % val_interval == 0
+#           val_step = 0
+#           for (val_xs, val_ys) in val_loader
+#               val_step += 1
+#               @show val_step
 
-# ╔═╡ b654aa5b-0e4a-4271-a092-11adce871ffd
-function dice_metric(ŷ, y)
-    dice = 2 * sum(ŷ .& y) / (sum(ŷ) + sum(y))
-    return dice
-end
+#               local val_ŷs = model(val_xs)
+#               local val_loss = loss_function(val_ŷs[:, :, :, 2, :], val_ys[:, :, :, 2, :])
 
-# ╔═╡ da2d5337-566a-45a5-a881-704acd3625c8
-function as_discrete(array, logit_threshold)
-    array = array .>= logit_threshold
-    return array
-end
-
-# ╔═╡ fc0b4656-eb18-4284-9cd6-4a3510df818b
-md"""
-## Train
-"""
-
-# ╔═╡ dd338b37-6036-4958-9feb-f926b9e1599f
-begin
-	model = unet3D(1, 2) |> gpu
-	ps = Flux.params(model)
-	loss_function = Flux.Losses.dice_coeff_loss
-	optimizer = Flux.ADAM(0.01)
-end
-
-# ╔═╡ 2f69eaea-9a54-411e-84bc-466cc3a90738
-begin
-	max_epochs = 30
-	val_interval = 2
-	epoch_loss_values = []
-	val_epoch_loss_values = []
-	dice_metric_values = []
-end
-
-# ╔═╡ 764ebf3a-1172-420b-96dc-3bdf645e8f3d
-# for epoch in 1:max_epochs
-#     epoch_loss = 0
-#     step = 0
-#     println("Epoch:", epoch)
-
-#     # Loop through training data
-#     for (xs, ys) in train_loader
-#         step += 1
-#         println("train step: ", step)
-
-#         xs, ys = xs |> gpu, ys |> gpu
-#         gs = Flux.gradient(ps) do
-#             ŷs = model(xs)
-#             loss = loss_function(ŷs[:, :, :, 2, :], ys[:, :, :, 2, :])
-#             return loss
-#         end
-#         Flux.update!(optimizer, ps, gs)
-
-#         local ŷs = model(xs)
-#         local loss = loss_function(ŷs[:, :, :, 2, :], ys[:, :, :, 2, :])
-#         epoch_loss += loss
-#     end
-#     epoch_loss = (epoch_loss / step)
-#     push!(epoch_loss_values, epoch_loss)
-
-#     # Loop through validation data
-#     if (epoch + 1) % val_interval == 0
-#         val_step = 0
-#         val_epoch_loss = 0
-#         metric_step = 0
-#         dice = 0
-#         for (val_xs, val_ys) in val_loader
-#             val_step += 1
-#             println("val step: ", val_step)
-
-#             val_xs, val_ys = val_xs |> gpu, val_ys |> gpu
-#             local val_ŷs = model(val_xs)
-#             local val_loss = loss_function(val_ŷs[:, :, :, 2, :], val_ys[:, :, :, 2, :])
-#             val_epoch_loss += val_loss
-
-#             val_ŷs, val_ys = val_ŷs |> cpu, val_ys |> cpu
-#             val_ŷs, val_ys = as_discrete(val_ŷs, 0.5), as_discrete(val_ys, 0.5)
-#             metric_step += 1
-#             metric = dice_metric(val_ŷs[:, :, :, 2, :], val_ys[:, :, :, 2, :])
-#             dice += metric
-#         end
-
-#         val_epoch_loss = (val_epoch_loss / val_step)
-#         push!(val_epoch_loss_values, val_epoch_loss)
-
-#         dice = dice / metric_step
-#         push!(dice_metric_values, dice)
-#     end
+#               val_ŷs, val_ys = as_discrete(val_ŷs, 0.5), as_discrete(val_ys, 0.5)
+#           end
+#       end
+#   end
 # end
 
 # ╔═╡ Cell order:
-# ╠═514a8cf8-15ff-4896-8905-3afcaa8b4d3a
-# ╠═48f904bc-af7c-46b0-84a6-f0f45fcffd7d
-# ╟─5f77cbb8-26a4-4287-b4a3-c9c1158f8d1f
-# ╠═7ec89eaf-7eca-47d9-90fc-c6b9fa241f2e
-# ╠═4294429e-e29e-4986-b0d7-66d8a1d7d3a5
-# ╠═3dc4d917-357f-4bf5-8554-e4ddf08bdc2c
-# ╠═ae9ad741-39f8-4991-bd90-9516f3f9ba10
-# ╟─6a7bc2b9-786f-4d8f-b546-883961fbe36e
-# ╠═b19eddb1-22c3-42b7-ab57-ecca033e0198
-# ╠═1e984c9f-0d87-45db-9a12-c182d1f47856
-# ╠═11fc9a9a-f0e4-4df9-a5c4-2e6404dbd86f
-# ╟─a3e23cd9-476f-49f5-8477-a4ce6c7fc7cb
-# ╠═a514108d-e739-4c12-8d42-7a900bc23987
-# ╠═ae250c91-99c0-41aa-9445-f3b24eac6dcf
-# ╠═a4fe5e5a-3e6a-4a73-9d4f-39fcde1aa7f8
-# ╟─57e35785-3639-4f68-b993-3cecd26369a4
-# ╠═bd717212-ccf8-41f3-9da2-059a5129008b
-# ╠═f4a24f2f-2b97-4d19-a221-bea10fc70752
-# ╟─ac774864-f414-48b2-a166-a5bdd722b199
-# ╠═46a375aa-b645-4cd6-9363-eeec2a6ef740
-# ╟─0f819e4f-538c-4269-b851-6cc43d08fdf2
-# ╠═e3b91342-550f-4762-828e-9e832b0a43f1
-# ╠═4e5fe0d9-389e-4f4a-9838-ac909ae28416
-# ╟─14a23b5f-8cbf-47d5-a428-995ddbf9d239
-# ╠═5449c0d1-22f4-44b3-a7f5-09a7829aebf2
-# ╠═af3a74ab-3bec-466e-9d00-2c19f092654d
-# ╠═5dfeca5d-eefb-48af-9c7e-6a175eb31f85
-# ╟─608f919d-a5e4-4782-8620-2a2079955989
-# ╠═f3d86bf5-ea8a-4c86-957d-6cbfbd5727a2
-# ╠═239ec2b2-1948-4ecf-a082-e25d8686b33d
-# ╟─cb0b4939-3dcf-4a51-866d-47653e346e70
-# ╠═b654aa5b-0e4a-4271-a092-11adce871ffd
-# ╠═da2d5337-566a-45a5-a881-704acd3625c8
-# ╟─fc0b4656-eb18-4284-9cd6-4a3510df818b
-# ╠═dd338b37-6036-4958-9feb-f926b9e1599f
-# ╠═2f69eaea-9a54-411e-84bc-466cc3a90738
-# ╠═764ebf3a-1172-420b-96dc-3bdf645e8f3d
+# ╠═123c3f17-4a4a-478d-ae0e-5ec7f9d4ad44
+# ╠═d781f284-16c1-4505-9f5a-dbd90c0334d2
+# ╟─6e2a1536-e659-4366-93de-ac7d2e7a27a4
+# ╠═855407b1-b8ce-465f-8531-1af5d014abe9
+# ╠═4cefe3ca-d7f1-4b2a-b63c-e39d734d2514
+# ╠═838a17df-7479-42c2-a2c5-ce626a4016fe
+# ╠═11d5a9b4-fdc3-48e4-a6ad-f7dec5fabb8b
+# ╟─349d843a-4a5f-44d7-9371-38c140b9972d
+# ╠═778cc0f9-127c-4d4b-a7de-906dfcc29cae
+# ╠═019e666e-e2e4-4e0b-a225-b346c7c70939
+# ╠═f7274fa9-8231-44fd-8d00-1c7ab7fc855c
+# ╠═9ac18928-9fe4-46ed-ab9c-916791739157
+# ╟─854f8bc8-ebe3-4d65-bf5a-417b16ea94fb
+# ╠═f461d63a-c5e6-4450-a80c-e15b6c2a56c0
+# ╠═ea9b74d8-89f0-4b02-b605-8d12c6becff0
+# ╠═fe1123dd-7228-4fe4-8dca-d081cbbfda95
+# ╟─edf2b37a-2775-44c0-8d2e-5e2350b454c4
+# ╠═7cf0cc6b-8ff9-4198-9646-9d0787e1013d
+# ╠═f2a92ff7-0f94-44d9-aba7-4b7db9fa4a56
+# ╠═b8b18728-cb5a-445a-809c-986e3965aad3
+# ╟─bfe051e5-66a3-4b4b-b446-48195d8f3868
+# ╠═4b7bff28-ec60-4a9d-8b38-648ab871ed16
+# ╟─08be9516-a44c-4fe5-ac46-f586600d586a
+# ╠═e2670a05-2c09-4bd2-b40c-0cc46fef2344
+# ╠═427ff0c3-d773-4099-a483-bb8f7d4b8ba1
+# ╟─616aa780-cbcf-4bf2-b6c5-a984f2530482
+# ╠═bda7309e-ae97-4ac0-96b6-36a776e9215e
+# ╠═e70816b8-4597-4a54-b4f7-735880df6132
+# ╠═7e7a7905-57e8-4630-a5b5-30895b57d6b4
+# ╠═1cfae1c4-1531-4ed1-87df-6ca97e610015
+# ╠═70357c15-d0ee-41b2-a063-7e644e61ae94
+# ╠═9d98ffe5-15b1-434d-bf92-bb35bd0ee831
+# ╠═0c24a134-e25b-4e63-948f-0804e3fffa23
+# ╠═4abe1a4a-65cd-4bed-bdae-ff31c69c5441
