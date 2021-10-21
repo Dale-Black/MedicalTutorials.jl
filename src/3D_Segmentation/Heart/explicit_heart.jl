@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.16.0
+# v0.16.2
 
 using Markdown
 using InteractiveUtils
@@ -71,9 +71,8 @@ end
 # ╔═╡ 838a17df-7479-42c2-a2c5-ce626a4016fe
 function loadfn_image(p)
     a = NIfTI.niread(string(p)).raw
-
     convert_a = convert(Array{Float32}, a)
-    convert_a = convert_a/max(convert_a...)
+    convert_a = convert_a / max(convert_a...)
     return convert_a
 end
 
@@ -87,13 +86,13 @@ begin
     )
 end
 
+# ╔═╡ 778cc0f9-127c-4d4b-a7de-906dfcc29cae
+train_files, val_files = MLDataPattern.splitobs(data, 0.8)
+
 # ╔═╡ 349d843a-4a5f-44d7-9371-38c140b9972d
 md"""
 ## Create learning method
 """
-
-# ╔═╡ 778cc0f9-127c-4d4b-a7de-906dfcc29cae
-train_files, val_files = MLDataPattern.splitobs(data, 0.8)
 
 # ╔═╡ 019e666e-e2e4-4e0b-a225-b346c7c70939
 struct ImageSegmentationSimple <: DLPipelines.LearningMethod
@@ -105,25 +104,6 @@ image_size = (112, 112, 96)
 
 # ╔═╡ 9ac18928-9fe4-46ed-ab9c-916791739157
 method = ImageSegmentationSimple(image_size)
-
-# ╔═╡ 854f8bc8-ebe3-4d65-bf5a-417b16ea94fb
-md"""
-### Set up `AddChannel` transform
-"""
-
-# ╔═╡ f461d63a-c5e6-4450-a80c-e15b6c2a56c0
-struct MapItemData <: Transform
-    f
-end
-
-# ╔═╡ ea9b74d8-89f0-4b02-b605-8d12c6becff0
-begin
-  DataAugmentation.apply(tfm::MapItemData, item::DataAugmentation.AbstractItem; randstate = nothing) = DataAugmentation.setdata(item, tfm.f(itemdata(item)))
-  DataAugmentation.apply(tfm::MapItemData, item::DataAugmentation.Image; randstate = nothing) = DataAugmentation.setdata(item, tfm.f(itemdata(item)))
-end
-
-# ╔═╡ fe1123dd-7228-4fe4-8dca-d081cbbfda95
-AddChannel() = MapItemData(a -> reshape(a, size(a)..., 1))
 
 # ╔═╡ edf2b37a-2775-44c0-8d2e-5e2350b454c4
 md"""
@@ -141,15 +121,14 @@ begin
       tfm_proj = RandomResizeCrop(method.imagesize)
       tfm_im = DataAugmentation.compose(
 			ImageToTensor(),
-			NormalizeIntensity(),
-			AddChannel()
+			NormalizeIntensity()
           )
       tfm_mask = OneHot()
 
       items = Image(Gray.(image)), MaskMulti(target)
       item_im, item_mask = apply(tfm_proj, (items))
 
-      return apply(tfm_im, item_im), apply(AddChannel(), apply(tfm_mask, item_mask))
+      return itemdata(apply(tfm_im, item_im)), itemdata(apply(tfm_mask, item_mask))
   end
 
   function DLPipelines.encode(
@@ -161,15 +140,14 @@ begin
       tfm_proj = CenterResizeCrop(method.imagesize)
       tfm_im = DataAugmentation.compose(
           ImageToTensor(),
-          NormalizeIntensity(),
-          AddChannel()
+          NormalizeIntensity()
           )
       tfm_mask = OneHot()
 
       items = Image(Gray.(image)), MaskMulti(target)
       item_im, item_mask = apply(tfm_proj, (items))
 
-      return apply(tfm_im, item_im), apply(AddChannel(), apply(tfm_mask, item_mask))
+      return itemdata(apply(tfm_im, item_im)), itemdata(apply(tfm_mask, item_mask))
   end
 end
 
@@ -182,8 +160,8 @@ end
 # ╔═╡ b8b18728-cb5a-445a-809c-986e3965aad3
 let
     x, y = MLDataPattern.getobs(methoddata_valid, 1)
-    @assert size(x.data) == (image_size..., 1, 1)
-    @assert size(y.data) == (image_size..., 2, 1)
+    @assert size(x) == (image_size..., 1)
+    @assert size(y) == (image_size..., 2)
 end
 
 # ╔═╡ bfe051e5-66a3-4b4b-b446-48195d8f3868
@@ -194,8 +172,13 @@ md"""
 # ╔═╡ 4b7bff28-ec60-4a9d-8b38-648ab871ed16
 begin
     x, y = MLDataPattern.getobs(methoddata_valid, 3)
-    x, y = x.data, y.data
 end;
+
+# ╔═╡ 6d1e9ca8-da31-4143-b46f-44b459a2cfc3
+size(x)
+
+# ╔═╡ 792a709c-6740-4fc0-b2a3-43ad2ae8035a
+size(y)
 
 # ╔═╡ 08be9516-a44c-4fe5-ac46-f586600d586a
 @bind b PlutoUI.Slider(1:size(x)[3], default=50, show_value=true)
@@ -208,48 +191,117 @@ heatmap(y[:, :, b, 2], colormap=:grays)
 
 # ╔═╡ 616aa780-cbcf-4bf2-b6c5-a984f2530482
 md"""
-## Create Dataloader
+## Dataloader
 """
 
 # ╔═╡ bda7309e-ae97-4ac0-96b6-36a776e9215e
 begin
     train_loader = DataLoaders.DataLoader(methoddata_train, 2)
-    val_loader = DataLoaders.DataLoader(methoddata_valid, 2)
+    val_loader = DataLoaders.DataLoader(methoddata_valid, 4)
 end
+
+# ╔═╡ 3da0e60e-0196-4538-ab08-49f21b46679a
+train_loader
 
 # ╔═╡ e70816b8-4597-4a54-b4f7-735880df6132
 val_loader
 
-# ╔═╡ 7e7a7905-57e8-4630-a5b5-30895b57d6b4
-traindl, valdl = methoddataloaders(data, method)
+# ╔═╡ ff962aea-2501-42f5-90bc-72f29deb42af
+md"""
+## Model
+"""
 
-# ╔═╡ 1cfae1c4-1531-4ed1-87df-6ca97e610015
-# for (xs, ys) in traindl
-# 	@show size(xs)
-# 	@show size(ys)
-# end
+# ╔═╡ 5987b24a-a1da-4d13-89d1-c854de2c3ba0
+begin
+    # 3D layer utilities
+    conv = (stride, in, out) -> Flux.Conv((3, 3, 3), in=>out, stride=stride, pad=Flux.SamePad())
+    tran = (stride, in, out) -> Flux.ConvTranspose((3, 3, 3), in=>out, stride=stride, pad=Flux.SamePad())
 
-# ╔═╡ 70357c15-d0ee-41b2-a063-7e644e61ae94
-# with_terminal() do
-# 	for (xs, ys) in val_loader
-# 	@show size(xs)
-# 	@show size(ys)
-# 	end
-# end
+    conv1 = (in, out) -> Flux.Chain(conv(1, in, out), Flux.BatchNorm(out), x -> leakyrelu.(x))
+    conv2 = (in, out) -> Flux.Chain(conv(2, in, out), Flux.BatchNorm(out), x -> leakyrelu.(x))
+    tran2 = (in, out) -> Flux.Chain(tran(2, in, out), Flux.BatchNorm(out), x -> leakyrelu.(x))
+end
 
-# ╔═╡ 9d98ffe5-15b1-434d-bf92-bb35bd0ee831
-# for (xs, ys) in val_loader
-# 	@show size(xs)
-# 	@show size(ys)
-# end
+# ╔═╡ f451e763-d7d0-4de7-a1f3-76776a194022
+begin
+    function unet3D(in_chs, lbl_chs)
+        # Contracting layers
+        l1 = Flux.Chain(conv1(in_chs, 4))
+        l2 = Flux.Chain(l1, conv1(4, 4), conv2(4, 16))
+        l3 = Flux.Chain(l2, conv1(16, 16), conv2(16, 32))
+        l4 = Flux.Chain(l3, conv1(32, 32), conv2(32, 64))
+        l5 = Flux.Chain(l4, conv1(64, 64), conv2(64, 128))
 
-# ╔═╡ 0c24a134-e25b-4e63-948f-0804e3fffa23
-# for (xs, ys) in train_loader
-# 	@assert size(xs.data) == (image_size..., 1, 4)
-# 	@assert size(ys.data) == (image_size..., 2, 2)
-# end
+        # Expanding layers
+        l6 = Flux.Chain(l5, tran2(128, 64), conv1(64, 64))
+        l7 = Flux.Chain(Flux.Parallel(+, l6, l4), tran2(64, 32), conv1(32, 32))
+        l8 = Flux.Chain(Flux.Parallel(+, l7, l3), tran2(32, 16), conv1(16, 16))
+        l9 = Flux.Chain(Flux.Parallel(+, l8, l2), tran2(16, 4), conv1(4, 4))
+        l10 = Flux.Chain(l9, conv1(4, lbl_chs))
+    end
+end
 
-# ╔═╡ 4abe1a4a-65cd-4bed-bdae-ff31c69c5441
+# ╔═╡ ad342428-920a-4414-a4cc-cab281a681dc
+model = unet3D(1, 2);
+
+# ╔═╡ d073cbac-18c8-4682-a508-307a619e84fc
+md"""
+## Helper functions
+"""
+
+# ╔═╡ 5726b8bd-e1e7-44eb-8872-a4a8d26be0f9
+function dice_metric(ŷ, y)
+    dice = 2 * sum(ŷ .& y) / (sum(ŷ) + sum(y))
+    return dice
+end
+
+# ╔═╡ 7b974fc5-7fc3-45e7-bf6c-48ea4f8eff16
+function as_discrete(array, logit_threshold)
+    array = array .>= logit_threshold
+    return array
+end
+
+# ╔═╡ b87d764e-dd31-48b7-bcf1-0538ef5c5e6a
+md"""
+## Loss functions
+"""
+
+# ╔═╡ 6dee15db-5cf9-4bfb-ab42-48f1c2777c04
+function dice_loss(ŷ, y)
+    ϵ = 1e-5
+    return loss = 1 - ((2 * sum(ŷ .* y) + ϵ) / (sum(ŷ .* ŷ) + sum(y .* y) + ϵ))
+end
+
+# ╔═╡ bdc1ca32-4847-440f-8a44-98bf7e822803
+function hd_loss(ŷ, y, ŷ_dtm, y_dtm)
+    M = (ŷ .- y) .^ 2 .* (ŷ_dtm .^ 2 .+ y_dtm .^ 2)
+    return loss = mean(M)
+end
+
+# ╔═╡ aafb8a3f-6e6c-4475-92db-550eb6999741
+md"""
+## Training
+"""
+
+# ╔═╡ 3d0f1399-54c3-45b6-840a-8e287513bbe7
+ps = Flux.params(model);
+
+# ╔═╡ 06061dc5-eae9-47cb-99aa-d521c5cd37dd
+loss_function = dice_loss
+
+# ╔═╡ 3a13a9a9-380a-4613-b137-99fdef8cb92f
+optimizer = Flux.ADAM(0.01)
+
+# ╔═╡ 36501d5d-d29a-4281-9e75-cebc97bb68cd
+begin
+  max_epochs = 2
+  val_interval = 1
+  epoch_loss_values = []
+  val_epoch_loss_values = []
+  dice_metric_values = []
+end
+
+# ╔═╡ ad1bf410-f187-4811-b752-09252e1b3a32
 # begin
 #   for epoch in 1:max_epochs
 #       step = 0
@@ -277,7 +329,6 @@ traindl, valdl = methoddataloaders(data, method)
 
 #               local val_ŷs = model(val_xs)
 #               local val_loss = loss_function(val_ŷs[:, :, :, 2, :], val_ys[:, :, :, 2, :])
-
 #               val_ŷs, val_ys = as_discrete(val_ŷs, 0.5), as_discrete(val_ys, 0.5)
 #           end
 #       end
@@ -292,30 +343,39 @@ traindl, valdl = methoddataloaders(data, method)
 # ╠═4cefe3ca-d7f1-4b2a-b63c-e39d734d2514
 # ╠═838a17df-7479-42c2-a2c5-ce626a4016fe
 # ╠═11d5a9b4-fdc3-48e4-a6ad-f7dec5fabb8b
-# ╟─349d843a-4a5f-44d7-9371-38c140b9972d
 # ╠═778cc0f9-127c-4d4b-a7de-906dfcc29cae
+# ╟─349d843a-4a5f-44d7-9371-38c140b9972d
 # ╠═019e666e-e2e4-4e0b-a225-b346c7c70939
 # ╠═f7274fa9-8231-44fd-8d00-1c7ab7fc855c
 # ╠═9ac18928-9fe4-46ed-ab9c-916791739157
-# ╟─854f8bc8-ebe3-4d65-bf5a-417b16ea94fb
-# ╠═f461d63a-c5e6-4450-a80c-e15b6c2a56c0
-# ╠═ea9b74d8-89f0-4b02-b605-8d12c6becff0
-# ╠═fe1123dd-7228-4fe4-8dca-d081cbbfda95
 # ╟─edf2b37a-2775-44c0-8d2e-5e2350b454c4
 # ╠═7cf0cc6b-8ff9-4198-9646-9d0787e1013d
 # ╠═f2a92ff7-0f94-44d9-aba7-4b7db9fa4a56
 # ╠═b8b18728-cb5a-445a-809c-986e3965aad3
 # ╟─bfe051e5-66a3-4b4b-b446-48195d8f3868
 # ╠═4b7bff28-ec60-4a9d-8b38-648ab871ed16
+# ╠═6d1e9ca8-da31-4143-b46f-44b459a2cfc3
+# ╠═792a709c-6740-4fc0-b2a3-43ad2ae8035a
 # ╟─08be9516-a44c-4fe5-ac46-f586600d586a
 # ╠═e2670a05-2c09-4bd2-b40c-0cc46fef2344
 # ╠═427ff0c3-d773-4099-a483-bb8f7d4b8ba1
 # ╟─616aa780-cbcf-4bf2-b6c5-a984f2530482
 # ╠═bda7309e-ae97-4ac0-96b6-36a776e9215e
+# ╠═3da0e60e-0196-4538-ab08-49f21b46679a
 # ╠═e70816b8-4597-4a54-b4f7-735880df6132
-# ╠═7e7a7905-57e8-4630-a5b5-30895b57d6b4
-# ╠═1cfae1c4-1531-4ed1-87df-6ca97e610015
-# ╠═70357c15-d0ee-41b2-a063-7e644e61ae94
-# ╠═9d98ffe5-15b1-434d-bf92-bb35bd0ee831
-# ╠═0c24a134-e25b-4e63-948f-0804e3fffa23
-# ╠═4abe1a4a-65cd-4bed-bdae-ff31c69c5441
+# ╟─ff962aea-2501-42f5-90bc-72f29deb42af
+# ╠═5987b24a-a1da-4d13-89d1-c854de2c3ba0
+# ╠═f451e763-d7d0-4de7-a1f3-76776a194022
+# ╠═ad342428-920a-4414-a4cc-cab281a681dc
+# ╟─d073cbac-18c8-4682-a508-307a619e84fc
+# ╠═5726b8bd-e1e7-44eb-8872-a4a8d26be0f9
+# ╠═7b974fc5-7fc3-45e7-bf6c-48ea4f8eff16
+# ╟─b87d764e-dd31-48b7-bcf1-0538ef5c5e6a
+# ╠═6dee15db-5cf9-4bfb-ab42-48f1c2777c04
+# ╠═bdc1ca32-4847-440f-8a44-98bf7e822803
+# ╟─aafb8a3f-6e6c-4475-92db-550eb6999741
+# ╠═3d0f1399-54c3-45b6-840a-8e287513bbe7
+# ╠═06061dc5-eae9-47cb-99aa-d521c5cd37dd
+# ╠═3a13a9a9-380a-4613-b137-99fdef8cb92f
+# ╠═36501d5d-d29a-4281-9e75-cebc97bb68cd
+# ╠═ad1bf410-f187-4811-b752-09252e1b3a32
