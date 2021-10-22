@@ -289,57 +289,114 @@ ps = Flux.params(model);
 # ╔═╡ 06061dc5-eae9-47cb-99aa-d521c5cd37dd
 loss_function = dice_loss
 
-# ╔═╡ 3a13a9a9-380a-4613-b137-99fdef8cb92f
-optimizer = Flux.ADAM(0.01)
+# ╔═╡ 98a49f59-dfba-46f0-851a-4c83f0b53183
+begin
+	max_epochs = 30
+	val_interval = 2
+	epoch_loss_values = []
+	val_epoch_loss_values = []
+	metric_values = []
+	metric_count = 0
+	metric_sum = 0.0
+	new_loss = 0
+	best_metric_epoch = -1
+	best_metric = -1
+end
+
+# ╔═╡ f8634d1c-0e67-4f6b-ab29-8ae1962a95e1
+begin
+	iter_num = 0
+	alpha = 1.00
+end
+
+# ╔═╡ ad1bf410-f187-4811-b752-09252e1b3a32
+for epoch in range(max_epochs)
+    epoch_loss = 0
+    step = 0
+    println("Epoch: ", epoch)
+
+    # Loop through training data
+    for (xs, ys) in train_loader
+        step += 1
+        println("Train Step: ", step)
+
+        xs, ys = xs |> gpu, ys |> gpu
+        ŷs = model(xs)
+
+        outputs_soft = softmax(ŷs; dims = 2)
+        loss_seg_dice = dice_loss(outputs_soft[:, 2, :, :, :], ys== 1)
+
+        gt_dtm = compute_dtm(ys)
+        seg_dtm = compute_dtm(outputs_soft[:, 2, :, :, :] .> 0.5)
+        
+        gs = Flux.gradient(ps) do
+            loss_hd = hd_loss(outputs_soft, seg_dtm, gt_dtm)
+            loss = alpha*(loss_seg_dice) + (1 - alpha) * loss_hd
+            return loss
+        end
+        Flux.update!(optimizer, ps, gs)
+        local ŷs = model(xs)
+        local loss = loss_function(ŷs[:, :, :, 2, :], ys[:, :, :, 2, :])
+        epoch_loss += loss_function(ŷs[:, :, :, 2, :], ys[:, :, :, 2, :])
+
+    end
+    epoch_loss = (epoch_loss / step)
+    push!(epoch_loss_values, epoch_loss)
+
+    println("epoch $(epoch_num + 1) average loss: (epoch_loss:.4f)")
+    alpha -= 0.001
+    if alpha <= 0.001
+        alpha = 0.001
+    end
+    # Loop through validation data
+    if (epoch + 1) % val_interval == 0
+        val_step = 0
+        val_epoch_loss = 0
+        metric_step = 0
+        dice = 0
+        for (val_xs, val_ys) in val_loader
+            val_step += 1
+            println("val step: ", val_step)
+
+            val_xs, val_ys = val_xs |> gpu, val_ys |> gpu
+            local val_ŷs = model(val_xs)
+            local val_ŷs = model(val_xs)
+
+            local outputs_soft = softmax(val_ŷs; dims = 2)
+            local loss_seg_dice = dice_loss(outputs_soft[:, 2, :, :, :], ys== 1)
+
+            local gt_dtm = compute_dtm(val_ys)
+            local seg_dtm = compute_dtm(outputs_soft[:, 2, :, :, :] .> 0.5)
+        
+            local loss_hd = hd_loss(outputs_soft, seg_dtm, gt_dtm)
+            local val_loss = alpha*(loss_seg_dice) + (1 - alpha) * loss_hd
+
+            val_epoch_loss += val_loss
+
+            val_ŷs, val_ys = val_ŷs |> cpu, val_ys |> cpu
+            val_ŷs, val_ys = as_discrete(val_ŷs, 0.5), as_discrete(val_ys, 0.5)
+            metric_step += 1
+            metric = dice_metric(val_ŷs[:, :, :, 2, :], val_ys[:, :, :, 2, :])
+            dice += metric
+        end
+
+        val_epoch_loss = (val_epoch_loss / val_step)
+        push!(val_epoch_loss_values, val_epoch_loss)
+
+        dice = dice / metric_step
+        push!(dice_metric_values, dice)
+    end
+end
 
 # ╔═╡ 36501d5d-d29a-4281-9e75-cebc97bb68cd
 begin
-  max_epochs = 2
-  val_interval = 1
-  epoch_loss_values = []
-  val_epoch_loss_values = []
-  dice_metric_values = []
+	base_lr = 0.001
+	max_iterations = 20000
+	optimizer = Flux.ADAM(0.001)
 end
 
-# ╔═╡ 98a49f59-dfba-46f0-851a-4c83f0b53183
-
-
-# ╔═╡ f8634d1c-0e67-4f6b-ab29-8ae1962a95e1
-
-
-# ╔═╡ ad1bf410-f187-4811-b752-09252e1b3a32
-# begin
-#   for epoch in 1:max_epochs
-#       step = 0
-#       @show epoch
-
-#       # Loop through training data
-#       for (xs, ys) in train_loader
-#           step += 1
-#           @show step
-
-#           gs = Flux.gradient(ps) do
-#               ŷs = model(xs)
-#               loss = loss_function(ŷs[:, :, :, 2, :], ys[:, :, :, 2, :])
-#               return loss
-#           end
-#           Flux.update!(optimizer, ps, gs)
-#       end
-
-#       # Loop through validation data
-#       if (epoch + 1) % val_interval == 0
-#           val_step = 0
-#           for (val_xs, val_ys) in val_loader
-#               val_step += 1
-#               @show val_step
-
-#               local val_ŷs = model(val_xs)
-#               local val_loss = loss_function(val_ŷs[:, :, :, 2, :], val_ys[:, :, :, 2, :])
-#               val_ŷs, val_ys = as_discrete(val_ŷs, 0.5), as_discrete(val_ys, 0.5)
-#           end
-#       end
-#   end
-# end
+# ╔═╡ 3a13a9a9-380a-4613-b137-99fdef8cb92f
+optimizer = Flux.ADAM(0.001)
 
 # ╔═╡ Cell order:
 # ╠═123c3f17-4a4a-478d-ae0e-5ec7f9d4ad44
